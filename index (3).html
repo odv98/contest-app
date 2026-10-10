@@ -1,0 +1,2692 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<title>Конкурсы</title>
+<style>
+:root{
+  --wall:#17212b; --fg:#f5f5f5; --hint:#8fa1b3; --btn:#5288c1; --btnfg:#fff;
+  --card:rgba(255,255,255,.07); --ease:cubic-bezier(.2,.8,.2,1);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+html{background:var(--wall)}
+html,body{min-height:100%;margin:0}
+body{
+  background:var(--wall) fixed;background-size:200% 200%;color:var(--fg);
+  font-family:-apple-system,"Segoe UI",Roboto,sans-serif;
+  padding:16px;padding-top:max(16px,env(safe-area-inset-top));padding-bottom:max(20px,env(safe-area-inset-bottom));
+  overflow-x:hidden;user-select:none;-webkit-user-select:none;
+}
+input,textarea,select{user-select:text;-webkit-user-select:text}
+.wrap{max-width:420px;margin:0 auto;position:relative;z-index:1}
+h1{font-size:24px;margin:8px 0 14px;text-align:center}
+.hint{color:var(--hint);font-size:13px;margin:6px 0;text-align:center}
+.hidden{display:none!important}
+button{font-family:inherit;cursor:pointer}
+.back{background:none;border:0;color:var(--btn);font-size:16px;font-weight:600;padding:8px 4px;margin-bottom:6px;transition:transform .15s var(--ease)}
+.back:active{transform:translateX(-4px)}
+
+/* декор (не мешает нажатиям) */
+.particles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.spark{position:absolute;bottom:-40px;opacity:0;animation:rise linear infinite}
+@keyframes rise{0%{transform:translateY(0) rotate(0);opacity:0}10%{opacity:.6}90%{opacity:.4}100%{transform:translateY(-110vh) rotate(360deg);opacity:0}}
+@keyframes wallShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+
+/* переходы между экранами */
+.view-in{animation:viewIn .42s var(--ease) both}
+.view-out{animation:viewOut .2s ease-in both;pointer-events:none}
+@keyframes viewIn{from{opacity:0;transform:translateY(16px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes viewOut{to{opacity:0;transform:translateY(-8px) scale(.99)}}
+
+/* отклики */
+button,.menu-item,.chk,.card-opt,.chip,.theme,.item{position:relative;overflow:hidden;transition:transform .15s var(--ease),box-shadow .2s,background .2s,border-color .2s,opacity .2s}
+button:active:not(:disabled),.menu-item:active,.card-opt:active,.chip:active,.chk:active,.theme:active,.item:active,.day:active:not(:disabled){transform:scale(.96)}
+.ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.45);transform:scale(0);animation:ripple .6s ease-out forwards;pointer-events:none}
+@keyframes ripple{to{transform:scale(1);opacity:0}}
+.wobble{animation:wobble .45s cubic-bezier(.36,.07,.19,.97) both}
+@keyframes wobble{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}30%,50%,70%{transform:translateX(-7px)}40%,60%{transform:translateX(7px)}}
+
+/* шапка меню */
+.topbar{display:flex;justify-content:flex-end;min-height:60px}
+.gear{width:60px;height:60px;border-radius:20px;border:0;background:var(--card);font-size:28px;display:grid;place-items:center;box-shadow:0 6px 16px rgba(0,0,0,.2)}
+.gear:active{transform:rotate(60deg) scale(.94)}
+
+/* кубик: только крутится */
+.hero{text-align:center;margin-top:-6px}
+.scene3d{perspective:500px;width:92px;height:92px;margin:0 auto}
+.die{width:92px;height:92px;position:relative;transform-style:preserve-3d;animation:spin 6s linear infinite}
+@keyframes spin{from{transform:rotateX(0) rotateY(0)}to{transform:rotateX(360deg) rotateY(720deg)}}
+.die .mf{position:absolute;left:-1px;top:-1px;width:94px;height:94px;background:linear-gradient(145deg,#ffffff,#e4e9f1);border-radius:18px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:13px;box-sizing:border-box;backface-visibility:visible}
+.die .mf i{width:13px;height:13px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#555,#111);align-self:center;justify-self:center;opacity:0}
+.die .mf i.on{opacity:1}
+.die .f1{transform:translateZ(47px)}.die .f6{transform:rotateY(180deg) translateZ(47px)}.die .f2{transform:rotateY(90deg) translateZ(47px)}
+.die .f5{transform:rotateY(-90deg) translateZ(47px)}.die .f3{transform:rotateX(90deg) translateZ(47px)}.die .f4{transform:rotateX(-90deg) translateZ(47px)}
+.title{margin:12px 0 2px;font-size:26px;font-weight:800;background:linear-gradient(90deg,#fff,#ffd27a,#fff);background-size:200% auto;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shimmer 4s linear infinite}
+@keyframes shimmer{to{background-position:200% center}}
+.tag{min-height:20px;color:var(--hint);font-size:14px;transition:opacity .3s,transform .3s;margin:0}
+.tag.out{opacity:0;transform:translateY(6px)}
+
+/* меню */
+.create{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:22px;padding:17px;border:0;border-radius:16px;background:linear-gradient(120deg,#22c55e,#10b981,#14b8a6,#22c55e);background-size:250% 250%;color:#fff;font-size:17px;font-weight:700;margin-bottom:18px;box-shadow:0 10px 24px rgba(34,197,94,.35);animation:grad 4s ease infinite,glow 2.6s ease-in-out infinite}
+.create::after{content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;pointer-events:none;background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent);transform:skewX(-20deg);animation:shine 3.2s ease-in-out infinite}
+@keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+@keyframes shine{0%{left:-60%}55%,100%{left:120%}}
+@keyframes glow{0%,100%{box-shadow:0 10px 24px rgba(34,197,94,.35)}50%{box-shadow:0 12px 34px rgba(34,197,94,.6)}}
+.menu-item{display:flex;align-items:center;gap:14px;width:100%;padding:16px;margin-bottom:12px;border:0;border-radius:18px;color:#fff;font-size:17px;font-weight:700;text-align:left;box-shadow:0 8px 20px rgba(0,0,0,.25)}
+.menu-item .ico{width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.22);display:grid;place-items:center;font-size:26px;flex:none;transition:transform .3s var(--ease)}
+.menu-item:hover .ico{transform:rotate(-8deg) scale(1.08)}
+.menu-item .txt{flex:1}
+.menu-item .sub{display:block;font-size:13px;font-weight:500;opacity:.85;margin-top:3px}
+.menu-item .arrow{font-size:24px;opacity:.8}
+.m-blue{background:linear-gradient(135deg,#4f8cff,#7b5cff)}
+.m-orange{background:linear-gradient(135deg,#ff9a3c,#ff5e62)}
+
+.item{padding:14px 14px 14px 18px;margin-bottom:10px;border-radius:16px;background:var(--card);cursor:pointer;display:flex;align-items:center;gap:10px}
+.item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--bar,#888)}
+.item .info{flex:1;min-width:0}
+.item .title2{font-weight:600;font-size:16px;margin-bottom:4px;color:var(--fg)}
+.item .meta{font-size:13px;color:var(--hint)}
+.item .chev{color:var(--hint);font-size:22px}
+.item[data-status=active]{--bar:#22c55e}
+.item[data-status=finished]{--bar:#7d8b99}
+.item[data-status=draft]{--bar:#fbbf24}
+.badge{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:middle}
+.b-active{background:rgba(34,197,94,.2);color:#4ade80}
+.b-finished{background:rgba(255,255,255,.12);color:var(--hint)}
+.b-draft{background:rgba(251,191,36,.18);color:#fbbf24}
+.empty{text-align:center;color:var(--hint);padding:30px 10px;font-size:14px}
+
+/* карточка конкурса */
+.dhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:12px}
+.dtitle{font-size:20px;font-weight:700;text-align:center;width:100%}
+.act{display:block;width:100%;padding:15px;border:0;border-radius:14px;color:#fff;font-weight:700;font-size:16px;margin-top:10px}
+.a-green{background:linear-gradient(135deg,#22c55e,#10b981);box-shadow:0 8px 20px rgba(34,197,94,.3)}
+.a-blue{background:linear-gradient(135deg,#4f8cff,#7b5cff)}
+.a-red{background:linear-gradient(135deg,#ef4444,#e53935)}
+
+/* настройки: темы */
+.themes{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.theme{border:2px solid transparent;border-radius:18px;padding:0;background:var(--card);color:var(--fg);text-align:left}
+.theme.sel{border-color:var(--fg)}
+.theme .sw-bg{height:70px;position:relative}
+.theme .sw-bg::after{content:'✓';position:absolute;right:8px;top:8px;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.9);color:#111;font-size:14px;font-weight:700;display:grid;place-items:center;opacity:0;transform:scale(.4);transition:.3s var(--ease)}
+.theme.sel .sw-bg::after{opacity:1;transform:scale(1)}
+.theme .nm{padding:10px 12px;font-weight:600;font-size:14px}
+
+/* мастер создания */
+#wiz{transition:opacity .2s}
+.st-fwd{animation:stFwd .38s var(--ease) both}
+.st-back{animation:stBack .38s var(--ease) both}
+@keyframes stFwd{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+@keyframes stBack{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:none}}
+.dots{display:flex;gap:6px;justify-content:center;margin-bottom:14px}
+.dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.2);transition:width .35s var(--ease),background .35s,border-radius .35s}
+.dots i.on{background:var(--btn);width:22px;border-radius:4px}
+.dots i.done{background:rgba(255,255,255,.5)}
+.stepEmoji{font-size:44px;text-align:center;animation:pop .5s var(--ease) both}
+@keyframes pop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.08);opacity:1}100%{transform:scale(1)}}
+.stepTitle{font-size:19px;font-weight:700;text-align:center;margin:6px 0 14px}
+.card-opt{display:block;width:100%;text-align:left;padding:14px;border-radius:16px;border:2px solid transparent;background:var(--card);color:var(--fg);margin-bottom:10px;font-size:16px}
+.card-opt.sel{border-color:var(--btn);background:rgba(82,136,193,.18)}
+.card-opt .d{font-size:13px;color:var(--hint);margin-top:4px}
+.field{background:var(--card);border-radius:16px;padding:12px 14px;margin-bottom:10px}
+.field label{display:block;font-size:13px;color:var(--hint);margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;background:transparent;border:0;color:var(--fg);font-size:16px;outline:none;font-family:inherit;padding:0;resize:none;color-scheme:dark}
+.field select option{background:#1f2c38}
+.row{display:flex;flex-direction:column;background:var(--card);border-radius:16px;padding:14px;margin-bottom:10px;gap:6px}
+.row .top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.row .hint{text-align:left;margin:0;font-size:12px}
+.sw{appearance:none;width:46px;height:27px;border-radius:999px;background:rgba(127,127,127,.35);position:relative;cursor:pointer;flex:none;transition:background .3s var(--ease)}
+.sw::after{content:'';position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.3);transition:left .3s var(--ease)}
+.sw:checked{background:linear-gradient(135deg,#4f8cff,#7b5cff)}
+.sw:checked::after{left:22px}
+.chk{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:16px;padding:12px;margin-bottom:8px;cursor:pointer}
+.chk:has(input:checked){background:rgba(82,136,193,.2)}
+.avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#f472b6,#a855f7);display:grid;place-items:center;color:#fff;font-weight:700;flex:none}
+.chk .nm{flex:1}
+.chk .nm small{display:block;color:var(--hint);font-size:12px}
+.chk input{width:22px;height:22px;accent-color:var(--btn);flex:none}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.chip{padding:8px 13px;border-radius:12px;border:1px solid rgba(127,127,127,.35);background:transparent;color:var(--fg);font-size:14px}
+.chip.sel{background:var(--btn);color:var(--btnfg);border-color:transparent;box-shadow:0 4px 12px rgba(82,136,193,.35)}
+.warn{color:#ff6b6b;font-size:13px;margin:8px 0}
+.err{color:#ff6b6b;font-size:14px;min-height:20px;text-align:center;margin:6px 0}
+.wiz-btns{display:flex;gap:10px;margin-top:12px}
+.wiz-btns button{flex:1;padding:15px 8px;border:0;border-radius:14px;font-size:16px;font-weight:600}
+.wiz-btns button:disabled{opacity:.5}
+.b-white{background:#fff;color:#222}
+.b-blue{background:linear-gradient(135deg,#0a7cff,#4f8cff);color:#fff;box-shadow:0 6px 16px rgba(10,124,255,.3)}
+.b-red{background:linear-gradient(135deg,#ef4444,#e53935);color:#fff}
+
+/* календарь */
+.cal{background:var(--card);border-radius:16px;padding:12px;margin-bottom:10px}
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.cal-head b{font-size:15px}
+.nav{width:38px;height:38px;border-radius:12px;border:0;background:rgba(127,127,127,.2);color:var(--fg);font-size:20px}
+.grid7{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.wd{font-size:11px;color:var(--hint);padding:4px 0}
+.day{aspect-ratio:1;border:0;border-radius:10px;background:transparent;color:var(--fg);font-size:14px;padding:0}
+.day:disabled{opacity:.3;cursor:default}
+.day.today{box-shadow:inset 0 0 0 1.5px var(--btn)}
+.day.sel{background:linear-gradient(135deg,#4f8cff,#7b5cff);color:#fff;font-weight:700}
+.timepick{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:10px}
+.timepick select{background:rgba(127,127,127,.2);color:var(--fg);border:0;border-radius:10px;padding:9px;font-size:15px}
+.timepick select:disabled{opacity:.4}
+.calsum{text-align:center;color:var(--hint);font-size:13px;margin-top:8px}
+
+.sum{background:var(--card);border-radius:16px;padding:4px 14px;margin-bottom:10px}
+.sum div{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid rgba(127,127,127,.2);font-size:14px}
+.sum div:last-child{border-bottom:0}
+.sum span{color:var(--hint);flex:none}
+.sum b{text-align:right;font-weight:600}
+
+/* модальное окно и уведомления */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:grid;place-items:center;z-index:20;padding:24px}
+.modal.hidden{display:none}
+.mbox{width:100%;max-width:320px;background:#1e2935;color:#f5f5f5;border-radius:20px;padding:20px;text-align:center;animation:pop .3s var(--ease) both;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+.mbox p{margin:0 0 6px;font-size:16px;font-weight:600}
+.mbox small{color:#9fb0c0;font-size:13px}
+.mbtns{display:flex;gap:10px;margin-top:16px}
+.mbtns button{flex:1;padding:13px;border:0;border-radius:12px;font-weight:700;font-size:15px}
+#mNo{background:rgba(255,255,255,.12);color:#fff}
+#mYes{background:linear-gradient(135deg,#ef4444,#e53935);color:#fff}
+.toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,140px);background:#1e2935;color:#fff;padding:12px 18px;border-radius:14px;font-size:14px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.4);z-index:30;transition:transform .35s var(--ease);max-width:90%;text-align:center}
+.toast.show{transform:translate(-50%,0)}
+
+/* выбор цвета кнопки и свой текст */
+.swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
+.sw-c{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;border-radius:14px;border:2px solid transparent;background:var(--card);color:var(--fg);font-size:12px}
+.sw-c .dot{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;font-size:16px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.25),0 4px 10px rgba(0,0,0,.25);transition:transform .25s var(--ease)}
+.sw-c.sel{border-color:var(--fg)}
+.sw-c.sel .dot{transform:scale(1.12)}
+.preview{margin-top:12px;padding:14px;border-radius:14px;text-align:center;color:#fff;font-weight:700;font-size:16px;box-shadow:0 8px 20px rgba(0,0,0,.25);transition:background .3s var(--ease)}
+.pen{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:16px;padding:12px 14px;margin-top:10px}
+.pen input{flex:1;background:transparent;border:0;color:var(--fg);font-size:16px;outline:none;font-family:inherit;min-width:0}
+
+/* выдвижной лист (вместо системных выпадающих списков) */
+.sheet-wrap{position:fixed;inset:0;z-index:25;display:flex;align-items:flex-end;justify-content:center}
+.sheet-wrap.hidden{display:none}
+.sheet-bg{position:absolute;inset:0;background:rgba(0,0,0,.45);opacity:0;transition:opacity .3s}
+.sheet{position:relative;width:100%;max-width:440px;max-height:72vh;display:flex;flex-direction:column;background:#1b2632;color:#f5f5f5;border-radius:26px 26px 0 0;padding:10px 16px calc(18px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .4s var(--ease);box-shadow:0 -12px 40px rgba(0,0,0,.45)}
+.sheet-wrap.open .sheet-bg{opacity:1}
+.sheet-wrap.open .sheet{transform:none}
+.sheet-grip{width:44px;height:5px;border-radius:3px;background:rgba(255,255,255,.25);margin:0 auto 12px}
+.sheet-title{text-align:center;font-weight:700;font-size:17px;margin-bottom:14px}
+.sheet-list{overflow-y:auto;display:flex;flex-direction:column;gap:6px;-webkit-overflow-scrolling:touch}
+.sheet-list.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.opt{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,.06);border:0;color:#f5f5f5;font-size:16px;text-align:left;transition:background .25s,transform .15s}
+.opt.sel{background:linear-gradient(135deg,#4f8cff,#7b5cff);color:#fff;box-shadow:0 6px 16px rgba(79,140,255,.35)}
+.opt .mark{opacity:0;transform:scale(.4);transition:.3s var(--ease);font-weight:800}
+.opt.sel .mark{opacity:1;transform:scale(1)}
+.sheet-list.grid .opt{justify-content:center;padding:13px 0;font-weight:700}
+.sheet-list.grid .opt .mark{display:none}
+
+/* выпадающий список-кнопка */
+.dd{width:100%;display:flex;justify-content:space-between;align-items:center;background:transparent;border:0;color:var(--fg);font-size:16px;padding:0;text-align:left}
+.dd .chev{color:var(--hint);font-size:20px;transition:transform .3s var(--ease)}
+.dd:active .chev{transform:translateY(3px)}
+
+/* степпер для количества победителей */
+.stepper{display:flex;align-items:center;justify-content:space-between;background:var(--card);border-radius:16px;padding:10px}
+.stepper button{width:52px;height:52px;border-radius:16px;border:0;background:linear-gradient(135deg,#4f8cff,#7b5cff);color:#fff;font-size:26px;font-weight:700;box-shadow:0 6px 14px rgba(79,140,255,.3)}
+.stepper button:disabled{opacity:.3;box-shadow:none}
+.stepper .sv{font-size:26px;font-weight:800;min-width:60px;text-align:center}
+
+/* галочка выбора канала */
+.chk .hid{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.chk{position:relative}
+.tick{width:26px;height:26px;border-radius:50%;border:2px solid rgba(127,127,127,.5);display:grid;place-items:center;color:transparent;font-size:14px;font-weight:800;flex:none;transition:all .25s var(--ease)}
+.chk:has(input:checked) .tick{background:linear-gradient(135deg,#4f8cff,#7b5cff);border-color:transparent;color:#fff;transform:scale(1.08)}
+
+/* кнопки времени в календаре */
+.timepick{display:flex;gap:6px;align-items:center;justify-content:center;margin-top:12px}
+.tbtn{min-width:72px;padding:10px 14px;border:0;border-radius:14px;background:rgba(127,127,127,.2);color:var(--fg);font-size:20px;font-weight:700;letter-spacing:1px}
+.tbtn:disabled{opacity:.35}
+.colon{font-size:20px;font-weight:700;color:var(--hint)}
+
+.sheet-list{min-height:0;flex:1 1 auto}
+.manual{display:flex;gap:10px;margin-bottom:6px}
+.manual input{flex:1;min-width:0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#f5f5f5;border-radius:14px;padding:12px 14px;font-size:20px;font-weight:700;outline:none;font-family:inherit;text-align:center;-moz-appearance:textfield}
+.manual input::-webkit-outer-spin-button,.manual input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.manual input:focus{border-color:#7b5cff;box-shadow:0 0 0 3px rgba(123,92,255,.25)}
+.manual button{padding:0 22px;border:0;border-radius:14px;background:linear-gradient(135deg,#4f8cff,#7b5cff);color:#fff;font-weight:700;font-size:16px}
+.manhint{color:#8fa1b3;font-size:12px;text-align:center;margin:0 0 12px}
+.sheet-list.grid .manual,.sheet-list.grid .manhint{grid-column:1/-1}
+.quick{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px}
+.quick .chip{font-size:13px;padding:7px 11px}
+.sv{cursor:pointer}
+
+.media-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:100%;padding:26px 12px;border-radius:18px;border:2px dashed rgba(127,127,127,.5);background:var(--card);color:var(--fg);font-size:16px;font-weight:600}
+.media-drop .big{font-size:38px}
+.media-drop small{color:var(--hint);font-weight:400;font-size:12px;text-align:center}
+.media-box{position:relative;border-radius:18px;overflow:hidden;background:#000;margin-bottom:10px}
+.media-box img,.media-box video{display:block;width:100%;max-height:260px;object-fit:contain}
+.media-meta{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--card);border-radius:16px;padding:10px 14px;margin-bottom:10px;font-size:14px}
+.media-meta span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.media-actions{display:flex;gap:8px;flex:none}
+.media-actions button{padding:9px 12px;border:0;border-radius:12px;font-size:13px;font-weight:700;color:#fff}
+.m-change{background:linear-gradient(135deg,#4f8cff,#7b5cff)}
+.m-remove{background:linear-gradient(135deg,#ef4444,#e53935)}
+
+.join-card{background:var(--card);border-radius:22px;padding:22px 18px;text-align:center}
+.join-emoji{font-size:44px;margin-bottom:6px}
+.join-title{font-size:21px;margin:4px 0 10px;word-break:break-word}
+.join-text{white-space:pre-wrap;text-align:left;font-size:15px;line-height:1.45;margin:0 0 10px;word-break:break-word}
+.join-input{width:100%;background:rgba(127,127,127,.18);border:1px solid rgba(127,127,127,.35);color:var(--fg);border-radius:14px;padding:12px;font-size:18px;text-align:center;font-family:inherit;outline:none;margin:6px 0 4px}
+.join-link{display:block;margin:8px 0;padding:12px;border-radius:14px;background:rgba(127,127,127,.18);color:var(--fg);text-decoration:none;font-weight:600}
+.act:disabled{opacity:.45}
+.a-plain{background:linear-gradient(135deg,#6b7a8c,#3d4a59)}
+
+/* ---------- стартовое меню ---------- */
+.hero2{text-align:center;padding:4px 0 8px}
+.die-stage{height:128px;display:flex;align-items:center;justify-content:center}
+.hello{font-size:30px;font-weight:700;margin:6px 0 2px;letter-spacing:-.3px;color:var(--fg)}
+.sub{color:var(--hint);font-size:14px;margin:0 0 14px}
+.menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.tile{display:flex;align-items:center;gap:12px;padding:16px;border:0;border-radius:20px;background:var(--card);color:var(--fg);text-align:left;font-size:14px;min-height:82px}
+.tile b{display:block;font-size:15px;font-weight:650}
+.tile small{display:block;color:var(--hint);font-size:12px;margin-top:3px}
+.tile-ico{width:42px;height:42px;border-radius:14px;background:rgba(127,127,127,.2);display:grid;place-items:center;font-size:20px;flex:none}
+.tile-main{grid-column:1/-1;background:linear-gradient(120deg,#22c55e,#10b981);color:#fff;min-height:88px}
+.tile-main small{color:rgba(255,255,255,.85)}
+.tile-main .tile-ico{background:rgba(255,255,255,.22);font-size:26px;font-weight:300}
+.sec-title{font-size:16px;font-weight:650;margin:22px 0 10px}
+.glass-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.glass-opt{border:2px solid transparent;border-radius:18px;padding:10px;background:var(--card);color:var(--fg);font-size:13px;text-align:left}
+.glass-opt.sel{border-color:var(--fg)}
+.gp{display:block;height:46px;border-radius:14px;margin-bottom:8px}
+.gp-liquid{background:linear-gradient(135deg,rgba(255,255,255,.55),rgba(255,255,255,.08));border:1px solid rgba(255,255,255,.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 6px 16px rgba(0,0,0,.2)}
+.gp-frost{background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.3);backdrop-filter:blur(6px)}
+.gp-soft{background:rgba(255,255,255,.12);box-shadow:0 10px 22px rgba(0,0,0,.3)}
+.gp-neon{background:rgba(0,0,0,.35);border:1px solid #ffffff;box-shadow:0 0 14px rgba(255,255,255,.35)}
+.gp-flat{background:#cfd6e0}
+
+/* ---------- стили карточек (настраиваются в «Настройках») ---------- */
+:root{--g-bg:var(--card);--g-blur:none;--g-border:0 solid transparent;--g-shadow:none}
+body[data-glass="liquid"]{--g-bg:linear-gradient(135deg,rgba(255,255,255,.26),rgba(255,255,255,.07));--g-blur:blur(22px) saturate(180%);--g-border:1px solid rgba(255,255,255,.38);--g-shadow:0 10px 34px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.45)}
+body[data-glass="frost"]{--g-bg:rgba(255,255,255,.12);--g-blur:blur(14px);--g-border:1px solid rgba(255,255,255,.2);--g-shadow:0 6px 18px rgba(0,0,0,.14)}
+body[data-glass="soft"]{--g-bg:rgba(255,255,255,.07);--g-blur:none;--g-border:0 solid transparent;--g-shadow:0 14px 40px rgba(0,0,0,.28)}
+body[data-glass="neon"]{--g-bg:rgba(0,0,0,.28);--g-blur:none;--g-border:1px solid var(--btn);--g-shadow:0 0 22px rgba(255,255,255,.08),inset 0 0 18px rgba(255,255,255,.04)}
+body[data-glass="flat"]{--g-bg:var(--card);--g-blur:none;--g-border:0 solid transparent;--g-shadow:none}
+.tile,.item,.join-card,.sum,.row,.field,.card-opt,.chk,.cal,.glass-opt{background:var(--g-bg)!important;backdrop-filter:var(--g-blur);-webkit-backdrop-filter:var(--g-blur);border:var(--g-border);box-shadow:var(--g-shadow)}
+.tile-main{background:linear-gradient(120deg,#22c55e,#10b981)!important;border:0!important}
+
+/* ---------- свои обои ---------- */
+.seg{display:flex;gap:8px;margin:4px 0 12px}
+.seg button{flex:1;padding:10px;border-radius:14px;border:2px solid transparent;background:var(--card);color:var(--fg);font-size:14px}
+.seg button.sel{border-color:var(--fg)}
+.palette{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:12px}
+.pal{height:40px;border-radius:12px;border:2px solid rgba(255,255,255,.25)}
+.pal.sel{border-color:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.35)}
+.wall-prev{height:120px;border-radius:20px;margin-bottom:12px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.2)}
+.angles{display:flex;gap:8px;margin-bottom:12px}
+.angles button{flex:1;padding:9px 0;border-radius:12px;border:2px solid transparent;background:var(--card);color:var(--fg);font-size:13px}
+.angles button.sel{border-color:var(--fg)}
+.pats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.pat{border:2px solid transparent;border-radius:16px;background:var(--card);color:var(--fg);padding:8px;font-size:12px}
+.pat.sel{border-color:var(--fg)}
+.pat-tile{height:54px;border-radius:12px;margin-bottom:6px;background-color:rgba(127,127,127,.25)}
+.wall-reset{width:100%;padding:12px;border:0;border-radius:14px;background:var(--card);color:var(--fg);font-size:14px}
+
+
+/* ---------- главный экран ---------- */
+.hero3{text-align:center;padding:0}
+.obj-stage{position:relative;height:190px}
+.obj{position:absolute;inset:0;margin:auto!important;width:92px;height:92px;opacity:0;transform:scale(.85);transition:opacity 1.2s ease,transform 1.4s var(--ease);pointer-events:none}
+.obj.on{opacity:1;transform:scale(1)}
+.obj-orb{border-radius:50%;background:radial-gradient(circle at 34% 30%,#fff 0,var(--lc) 42%,rgba(0,0,0,0) 72%);animation:glow2 4s ease-in-out infinite}
+@keyframes glow2{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
+.obj-moon,.obj-leaf,.obj-drop{filter:drop-shadow(0 6px 16px rgba(0,0,0,.25))}
+.hero3 .hello{margin-top:26px;font-size:30px;font-weight:700;letter-spacing:-.3px}
+.hero3 .sub{margin-top:2px}
+.tile-create{width:100%;display:flex;align-items:center;gap:14px;border:0;border-radius:24px;padding:18px;margin:18px 0 12px;background:linear-gradient(120deg,#22c55e,#10b981);color:#fff;text-align:left;box-shadow:0 12px 26px rgba(16,185,129,.28)}
+.tc-ico{width:44px;height:44px;border-radius:15px;background:rgba(255,255,255,.2);display:grid;place-items:center;flex:none}
+.tc-ico svg{width:24px;height:24px}
+.tc-txt b{display:block;font-size:17px;font-weight:650}
+.tc-txt small{display:block;font-size:13px;opacity:.85;margin-top:2px}
+.menu-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+.tile2{border:0;border-radius:22px;background:var(--card);color:var(--fg);padding:16px;text-align:left;display:flex;flex-direction:column;gap:10px;min-height:118px}
+.tile2 b{font-size:15px;font-weight:650}
+.tile2 small{color:var(--hint);font-size:12px}
+.ico2{width:36px;height:36px;border-radius:12px;background:rgba(127,127,127,.18);display:grid;place-items:center}
+.ico2 svg{width:20px;height:20px}
+.gear-mini{grid-column:2;justify-self:end;width:40px;height:40px;border:0;border-radius:50%;background:var(--card);color:var(--fg);display:grid;place-items:center;padding:0}
+.gear-mini svg{width:19px;height:19px}
+/* ---------- свет ---------- */
+#lights{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;transition:opacity 1s ease}
+#lights.off{opacity:0}
+.lamp{position:absolute;width:75vmax;height:75vmax;margin-left:-37.5vmax;margin-top:-37.5vmax;border-radius:50%;background:radial-gradient(circle,var(--lc) 0%,rgba(0,0,0,0) 62%);opacity:.34;filter:blur(18px);transition:left 3.2s ease,top 3.2s ease}
+/* ---------- настройки: тема и язык ---------- */
+.set-h{margin:4px 0 12px;font-size:24px}
+.set-block{background:var(--card);border-radius:22px;padding:14px;margin-bottom:12px}
+.set-title{font-size:17px;font-weight:700;margin-bottom:6px}
+.set-sub{font-size:13px;color:var(--hint);margin:12px 0 8px}
+.mode-opts{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.mode-opts button{border:0;border-radius:14px;padding:10px 0;background:rgba(127,127,127,.18);color:var(--fg);font-size:12px}
+.mode-opts button.sel{background:var(--fg);color:var(--bg)}
+.light-toggle{width:100%;margin-top:10px;border:0;border-radius:14px;padding:12px;background:rgba(127,127,127,.18);color:var(--fg);font-size:14px;text-align:left}
+.light-toggle.on{background:var(--fg);color:var(--bg)}
+.lang-opts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.lang-opts button{border:0;border-radius:16px;padding:14px 4px;background:rgba(127,127,127,.18);color:var(--fg);font-size:14px}
+.lang-opts button.sel{background:var(--fg);color:var(--bg)}
+
+#calm{display:block;width:100%;height:190px}
+
+.obj-stage{position:relative;height:190px}
+.calm{position:absolute;left:-30px;top:-30px;width:calc(100% + 60px);height:calc(100% + 60px);opacity:0;transition:opacity 1.6s ease;-webkit-mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 60%,transparent 100%);mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 60%,transparent 100%);pointer-events:none}
+.calm.on{opacity:1}
+.die-wrap{position:absolute;inset:0;margin:auto!important;width:92px;height:92px;opacity:0;transition:opacity 1.6s ease;pointer-events:none}
+.die-wrap.on{opacity:1}
+
+/* ---------- игра ---------- */
+.bb-head{display:flex;justify-content:space-between;align-items:center;margin:4px 0 12px}
+.bb-title{font-size:22px;font-weight:700}
+.bb-best{color:var(--hint);font-size:13px}
+.bb-score{font-size:34px;font-weight:800}
+.bb-board{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;width:min(92vw,360px);margin:0 auto;padding:8px;background:var(--card);border-radius:18px;box-sizing:content-box}
+.bb-cell{aspect-ratio:1;border-radius:6px;background:rgba(127,127,127,.14)}
+.bb-cell.f{background:var(--pc)}
+.bb-cell.pv{background:rgba(255,255,255,.4)}
+.bb-tray{display:flex;justify-content:space-around;align-items:center;gap:8px;margin:16px 0;min-height:100px;touch-action:none}
+.bb-piece{display:grid;gap:3px;padding:10px;border-radius:16px;background:var(--card);touch-action:none;cursor:grab}
+.bb-pc{width:16px;height:16px;border-radius:4px;display:block}
+.bb-ghost{position:fixed;left:0;top:0;pointer-events:none;z-index:50;display:grid;gap:4px;opacity:.92}
+.bb-gc{border-radius:6px;display:block}
+.bb-btn{width:100%;border:0;border-radius:16px;padding:14px;background:var(--btn);color:var(--btnfg);font-size:16px;font-weight:600;margin-top:4px}
+.bb-top-h{font-weight:650;margin:18px 0 8px}
+.bb-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:var(--card);margin-bottom:6px}
+.bb-row span{width:22px;color:var(--hint)}
+.bb-row b{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bb-row em{font-style:normal;font-weight:700}
+.bb-row.me{outline:2px solid var(--fg)}
+.bb-over{position:fixed;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center;z-index:40}
+.bb-over.hidden{display:none}
+.bb-over-box{background:#1e2935;color:#fff;border-radius:22px;padding:24px;text-align:center;min-width:240px}
+.bb-over-t{font-size:18px;font-weight:700}
+.bb-over-score{font-size:40px;font-weight:800;margin:8px 0 14px}
+
+/* ---------- анимации игры ---------- */
+.bb-wrap{position:relative;width:min(92vw,360px);margin:0 auto}
+.bb-wrap .bb-board{box-sizing:border-box;width:100%;margin:0}
+.bb-scorebox{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.bb-top-btn{border:0;border-radius:999px;padding:7px 14px;background:var(--card);color:var(--fg);font-size:13px;font-weight:600}
+@keyframes bbPop{0%{transform:scale(.35);opacity:.3}60%{transform:scale(1.14)}100%{transform:scale(1)}}
+@keyframes bbClear{0%{transform:scale(1);filter:brightness(2.2);box-shadow:0 0 16px rgba(255,255,255,.9)}60%{transform:scale(1.08);filter:brightness(1.6)}100%{transform:scale(0);opacity:0}}
+@keyframes bbIn{0%{transform:scale(.3) translateY(14px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}
+@keyframes bbFloat{0%{opacity:0;transform:translate(-50%,-30%) scale(.7)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-125%) scale(1)}}
+.bb-cell.pop{animation:bbPop .3s ease-out}
+.bb-cell.clr{animation:bbClear .42s ease-in forwards}
+.bb-piece.in{animation:bbIn .35s ease-out both}
+.bb-popup{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);pointer-events:none;text-align:center;font-weight:800;font-size:30px;color:#fff;text-shadow:0 4px 18px rgba(0,0,0,.45);opacity:0;white-space:nowrap}
+.bb-popup.show{animation:bbFloat 1.3s ease-out forwards}
+.bb-popup small{display:block;font-size:13px;font-weight:600;opacity:.95;margin-top:2px}
+.bb-top-box{width:min(90vw,340px);max-height:80vh;overflow:auto}
+.bb-top-box .bb-top{margin-top:10px}
+
+.bb-slot{width:64px;height:64px}
+.bb-wrap{border-radius:20px;box-shadow:0 0 36px var(--glow, transparent);transition:box-shadow .9s ease}
+@keyframes bbWave{0%{transform:scale(1)}35%{transform:scale(1.22);filter:brightness(2.6);box-shadow:0 0 18px #fff}100%{transform:scale(1)}}
+@keyframes bbSwap{0%{opacity:0;transform:scale(.55)}100%{opacity:1;transform:scale(1)}}
+.bb-cell.wave{animation:bbWave .8s ease-out both;animation-delay:var(--d)}
+.bb-cell.swap{animation:bbSwap .6s ease-out both;animation-delay:var(--d)}
+
+.bb-noroom{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;opacity:0;font-size:26px;font-weight:700;color:#fff;text-shadow:0 4px 18px rgba(0,0,0,.5);background:radial-gradient(circle,rgba(0,0,0,.4),transparent 70%);border-radius:20px}
+.bb-noroom.show{animation:bbNoRoom 2s ease forwards}
+@keyframes bbNoRoom{0%{opacity:0;letter-spacing:.7em;filter:blur(10px);transform:scale(.9)}25%{opacity:1;letter-spacing:.08em;filter:blur(0);transform:scale(1.03)}70%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.05);filter:blur(6px)}}
+
+.bb-popup.big{font-size:44px}
+.bb-popup.big small{font-size:15px}
+.bb-beam{position:absolute;pointer-events:none;border-radius:8px;background:linear-gradient(90deg,transparent,#fff 18%,hsl(var(--h),95%,72%) 50%,#fff 82%,transparent);box-shadow:0 0 22px hsl(var(--h),95%,66%);transform-origin:left center;animation:bbBeam .5s ease-out both}
+.bb-beam.v{background:linear-gradient(180deg,transparent,#fff 18%,hsl(var(--h),95%,72%) 50%,#fff 82%,transparent);transform-origin:center top;animation-name:bbBeamV}
+@keyframes bbBeam{0%{transform:scaleX(0);opacity:1}55%{transform:scaleX(1);opacity:1}100%{transform:scaleX(1);opacity:0}}
+@keyframes bbBeamV{0%{transform:scaleY(0);opacity:1}55%{transform:scaleY(1);opacity:1}100%{transform:scaleY(1);opacity:0}}
+.bb-part{position:absolute;width:7px;height:7px;border-radius:2px;pointer-events:none;animation:bbPart .65s cubic-bezier(.2,.7,.3,1) both}
+@keyframes bbPart{0%{transform:translate(0,0) scale(1.2);opacity:1}100%{transform:translate(var(--tx),var(--ty)) rotate(var(--rot)) scale(.2);opacity:0}}
+@keyframes bbShake{0%,100%{transform:translate(0,0)}20%{transform:translate(-5px,2px)}40%{transform:translate(5px,-2px)}60%{transform:translate(-4px,1px)}80%{transform:translate(2px,-1px)}}
+.bb-wrap.shake{animation:bbShake .42s ease-in-out}
+
+#v-game{position:relative;overflow:hidden;border-radius:24px;padding:14px;background:var(--bbbg, transparent);transition:background .6s ease}
+#v-game > *:not(#bbDeco):not(#bbFlash){position:relative;z-index:1}
+#bbDeco{position:absolute;inset:0;pointer-events:none;z-index:0}
+#bbFlash{position:absolute;inset:0;pointer-events:none;z-index:2;opacity:0;background:rgba(255,255,255,.35)}
+#bbFlash.show{animation:bbFlashK 1.1s ease-out}
+@keyframes bbFlashK{0%{opacity:0}25%{opacity:1}100%{opacity:0}}
+.bb-deco{position:absolute;opacity:.2;animation:bbDrift linear infinite;transition:opacity .8s;will-change:transform}
+.bb-deco.out{opacity:0}
+@keyframes bbDrift{0%{transform:translate(0,0) rotate(0)}50%{transform:translate(14px,-20px) rotate(14deg)}100%{transform:translate(0,0) rotate(0)}}
+.bb-scorerow{display:flex;align-items:center;gap:8px}
+.bb-mult{background:var(--card);border-radius:999px;padding:4px 10px;font-weight:700;font-size:14px}
+#v-game.dark .bb-title,#v-game.dark .bb-best,#v-game.dark .bb-score,#v-game.dark .bb-row b,#v-game.dark .bb-row em{color:#fff}
+#v-game.dark .bb-top-btn,#v-game.dark .bb-mult{background:rgba(255,255,255,.14);color:#fff}
+#v-game.dark .bb-cell{background:rgba(255,255,255,.10)}
+
+#v-game:not(.dark) .bb-title,#v-game:not(.dark) .bb-best,#v-game:not(.dark) .bb-score,#v-game:not(.dark) .bb-top-h,#v-game:not(.dark) .bb-mult{color:#161625}
+#v-game:not(.dark) .bb-mult{background:rgba(255,255,255,.7)}
+#v-game:not(.dark) .bb-top-btn{background:rgba(255,255,255,.7);color:#161625}
+.bb-top-btn.pulse{animation:bbPulse .45s ease}
+@keyframes bbPulse{0%{transform:scale(1)}40%{transform:scale(.84)}100%{transform:scale(1)}}
+.bb-top-box.pop{animation:bbPopIn .42s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes bbPopIn{0%{opacity:0;transform:scale(.7) translateY(24px)}100%{opacity:1;transform:none}}
+.bb-top-box .bb-row{animation:bbRowIn .4s ease both;animation-delay:calc(var(--i,0) * 55ms)}
+@keyframes bbRowIn{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:none}}
+.bb-cell.willclr{background:rgba(255,255,255,.85)!important;box-shadow:0 0 12px rgba(255,255,255,.9);animation:bbWillClr .5s ease-in-out infinite alternate}
+@keyframes bbWillClr{from{transform:scale(1)}to{transform:scale(.84)}}
+#bbTopModal{align-items:center}
+
+.bb-score.tick{animation:bbTick .35s ease}
+@keyframes bbTick{0%{transform:scale(1)}40%{transform:scale(1.12)}100%{transform:scale(1)}}
+
+.bb-tray{justify-content:center!important;gap:30px!important}
+.bb-piece{padding:14px!important}
+
+.bb-bgfade{position:absolute;inset:0;opacity:0;transition:opacity 1s ease;z-index:0;border-radius:24px;pointer-events:none}
+.bb-bgfade.on{opacity:1}
+.bb-scorerow{min-width:120px;justify-content:flex-end}
+.bb-score{min-width:70px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;background:none;border-radius:0;box-shadow:none}
+.bb-scorebox{min-width:150px}
+.bb-tray{gap:26px!important}
+.bb-piece{padding:12px}
+
+#v-game{--bbboard:rgba(255,255,255,.55);--bbcell:rgba(0,0,0,.09)}
+#v-game.dark{--bbboard:rgba(0,0,0,.32);--bbcell:rgba(255,255,255,.14)}
+#v-game .bb-board{background:var(--bbboard)!important}
+#v-game .bb-cell:not(.f){background:var(--bbcell)!important}
+#v-game .bb-cell.f{box-shadow:0 2px 6px rgba(0,0,0,.18)}
+#v-game .bb-piece{background:var(--bbboard)!important}
+#v-game .bb-pc{box-shadow:none}
+#v-game .bb-cell.pv{background:rgba(255,255,255,.6)!important}
+
+.car-sec{margin:6px 0 14px}
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin:10px 2px 8px;font-weight:650;font-size:16px}
+.link-btn{border:0;background:none;color:var(--btn);font-size:14px}
+.car{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 -16px;padding:4px 16px 12px;scrollbar-width:none}
+.car::-webkit-scrollbar{display:none}
+.ccard{flex:0 0 170px;scroll-snap-align:start;border:0;border-radius:22px;background:var(--card);color:var(--fg);padding:14px;text-align:left;display:flex;flex-direction:column;gap:6px;min-height:150px}
+.cc-name{font-weight:650;font-size:15px;line-height:1.25;word-break:break-word}
+.cc-meta{color:var(--hint);font-size:12px}
+.cc-btn{margin-top:auto;border:0;border-radius:14px;background:var(--btn);color:var(--btnfg);padding:9px;font-weight:600}
+.badge2{align-self:flex-start;font-size:11px;padding:3px 8px;border-radius:999px;background:rgba(127,127,127,.2);color:var(--fg)}
+.badge2.active{background:rgba(34,197,94,.2);color:#4ade80}
+.badge2.finished{color:var(--hint)}
+.ccard.more{justify-content:center;align-items:center;border:2px dashed rgba(127,127,127,.4);background:transparent}
+.more-n{font-size:28px;font-weight:800}
+.car-empty{color:var(--hint);font-size:14px;padding:18px 4px;min-width:100%}
+.menu-foot{display:flex;justify-content:flex-end;margin-top:6px}
+
+.av{position:relative;display:grid;place-items:center;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#4f8cff,#7b5cff);color:#fff;width:44px;height:44px;font-weight:700;flex:none}
+.av.sm{width:40px;height:40px}
+.av b{font-size:16px}
+
+/* ---------- жидкое стекло: лучше и единообразно ---------- */
+body[data-glass="liquid"]{--g-bg:linear-gradient(120deg,rgba(255,255,255,.38) 0%,rgba(255,255,255,0) 42%),linear-gradient(135deg,rgba(255,255,255,.22),rgba(255,255,255,.07));--g-blur:blur(26px) saturate(190%);--g-border:1px solid rgba(255,255,255,.42);--g-shadow:0 14px 40px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.6),inset 0 -1px 0 rgba(255,255,255,.14)}
+body[data-glass="frost"]{--g-bg:rgba(255,255,255,.14);--g-blur:blur(16px) saturate(140%);--g-border:1px solid rgba(255,255,255,.22);--g-shadow:0 8px 22px rgba(0,0,0,.16)}
+body[data-glass="soft"]{--g-bg:rgba(255,255,255,.1);--g-blur:blur(6px);--g-border:1px solid rgba(255,255,255,.1);--g-shadow:0 16px 40px rgba(0,0,0,.28)}
+.ccard,.tile2,.set-block,.chrow,.tile-create{background:var(--g-bg)!important;backdrop-filter:var(--g-blur);-webkit-backdrop-filter:var(--g-blur);border:var(--g-border)!important;box-shadow:var(--g-shadow)}
+.ccard.more{border:1.5px dashed rgba(255,255,255,.4)!important;background:transparent!important}
+
+/* ---------- настройки: кнопки с анимацией, текст всегда читается ---------- */
+.mode-opts button,.lang-opts button,.glass-opt,.theme,.light-toggle,.wall-reset{transition:transform .18s cubic-bezier(.2,.8,.2,1),background-color .25s,color .25s,box-shadow .25s,border-color .25s;color:var(--fg)!important}
+.mode-opts button:active,.lang-opts button:active,.glass-opt:active,.theme:active,.light-toggle:active,.wall-reset:active{transform:scale(.93)}
+.mode-opts button.sel,.lang-opts button.sel{background:var(--btn)!important;color:var(--btnfg)!important;box-shadow:0 6px 18px rgba(0,0,0,.22);animation:selPop .35s cubic-bezier(.2,.9,.3,1.3)}
+.light-toggle.on{background:var(--btn)!important;color:var(--btnfg)!important}
+.glass-opt.sel,.theme.sel{border:2px solid var(--btn)!important}
+@keyframes selPop{0%{transform:scale(.9)}100%{transform:scale(1)}}
+.set-h{font-size:26px;font-weight:700;margin:6px 4px 14px}
+.set-title{font-size:17px;font-weight:700;margin-bottom:4px}
+.set-sub{font-size:13px;color:var(--hint);margin:14px 2px 8px}
+
+/* подложка под каждой каруселью: прозрачнее кнопки «Новый розыгрыш» */
+.car-sec{background:rgba(255,255,255,.09);-webkit-backdrop-filter:blur(16px) saturate(150%);backdrop-filter:blur(16px) saturate(150%);border:1px solid rgba(255,255,255,.16);border-radius:26px;padding:12px 14px 4px;margin:10px 0 14px;box-shadow:0 10px 30px rgba(0,0,0,.12)}
+.car-sec .car{margin:0 -14px;padding:4px 14px 10px}
+.car-sec .sec-head{margin:4px 2px 6px}
+
+/* компактные отступы: блоки меню ниже по высоте, чем «Новый розыгрыш» */
+.car-sec{padding:8px 10px 2px;margin:6px 0 8px;border-radius:20px}
+.car-sec .car{margin:0 -10px;padding:2px 10px 6px}
+.car-sec .sec-head{margin:2px 2px 4px;font-size:15px}
+.car-sec .ccard{min-height:0;padding:10px 12px;gap:4px;flex:0 0 150px}
+.car-sec .ccard.more{min-height:86px}
+.car-sec .cc-btn{padding:7px}
+.car-sec .car-empty{padding:8px 4px}
+.menu-foot{margin-top:2px}
+
+.car-sec[data-sec]{cursor:pointer;transition:transform .16s cubic-bezier(.2,.8,.2,1),background-color .2s}
+.car-sec[data-sec]:active{transform:scale(.985);background:rgba(255,255,255,.14)}
+
+.res-title{font-size:17px;font-weight:700;margin:8px 0 10px;text-align:left}
+.res{width:100%;border-collapse:collapse;font-size:14px;text-align:left;margin-bottom:8px}
+.res th,.res td{padding:9px 8px;border-bottom:1px solid rgba(127,127,127,.25)}
+.res th{color:var(--hint);font-weight:600;font-size:12px}
+.res td:first-child{width:52px;font-weight:700}
+
+.st-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.st-box{background:var(--card);border-radius:18px;padding:14px}
+.st-box small{display:block;color:var(--hint);font-size:12px;margin-bottom:4px}
+.st-box b{font-size:22px}
+.st-chips{display:flex;gap:6px;margin-bottom:12px}
+.st-chips button{flex:1;border:0;border-radius:12px;padding:9px 4px;background:rgba(127,127,127,.18);color:var(--fg);font-size:13px}
+.st-chips button.sel{background:var(--btn);color:var(--btnfg)}
+.chart-card{background:var(--card);border-radius:20px;padding:14px}
+.chart-title{font-weight:650;margin-bottom:8px}
+.chart{width:100%;height:auto;color:var(--hint);display:block}
+</style>
+</head>
+<body>
+<div id="lights"><div class="lamp"></div><div class="lamp"></div><div class="lamp"></div></div>
+<div class="wrap">
+  <!-- Участие по ссылке (startapp) -->
+  <section id="v-join" class="hidden">
+    <div class="join-card">
+      <div class="join-emoji">🎁</div>
+      <h2 class="join-title" id="jTitle"></h2>
+      <p class="join-text" id="jText"></p>
+      <p class="hint" id="jInfo"></p>
+      <div id="jCaptcha" class="hidden">
+        <p class="hint" id="jCapQ"></p>
+        <input id="jCapA" class="join-input" inputmode="numeric" placeholder="Ответ">
+      </div>
+      <div id="jResults"></div>
+      <div id="jMissing"></div>
+      <button class="act" id="jBtn" disabled>Участвовать</button>
+      <p class="hint" id="jMsg"></p>
+    </div>
+  </section>
+
+  <!-- Главное меню -->
+  <section id="v-menu">
+    <div class="hero3">
+      <div class="obj-stage" id="objStage">
+        <canvas id="calmA" class="calm"></canvas>
+        <canvas id="calmB" class="calm"></canvas>
+        <div class="scene3d die-wrap" id="dieWrap"><div class="die" id="die"></div></div>
+      </div>
+      <h1 class="hello" data-i18n="hello">Розыгрыши</h1>
+      <p class="sub" data-i18n="sub">Каналы, участники и итоги в одном месте</p>
+      <p class="tag" id="tag" hidden></p>
+    </div>
+
+    <button class="tile-create" id="btnCreate">
+      <span class="tc-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+      <span class="tc-txt"><b data-i18n="create">Новый розыгрыш</b><small data-i18n="createSub">Создать и запустить</small></span>
+    </button>
+
+    <div class="car-sec" data-sec="channels">
+      <div class="sec-head">
+        <span>Мои каналы</span>
+        <button class="link-btn" data-go="channels">Все ›</button>
+      </div>
+      <div class="car" id="carChannels"></div>
+    </div>
+
+    <div class="car-sec" data-sec="contests">
+      <div class="sec-head">
+        <span>Мои розыгрыши</span>
+        <button class="link-btn" data-go="contests">Все ›</button>
+      </div>
+      <div class="car" id="carContests"></div>
+    </div>
+
+    <div class="menu-foot">
+      <button class="gear-mini" id="btnSettings" aria-label="Настройки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/></svg></span>
+        <b data-i18n="myGiveaways">Мои розыгрыши</b>
+        <small id="ctCount"></small>
+      </button>
+    </div>
+  </section>
+
+  <!-- Мои каналы -->
+  <section id="v-channels" class="hidden">
+    <button class="back" data-back>‹ Назад</button>
+    <h1>📢 Мои каналы</h1>
+    <p class="hint">Каналы, к которым подключен бот</p>
+    <div id="chList"></div>
+  </section>
+
+  <!-- Мои конкурсы -->
+  <section id="v-contests" class="hidden">
+    <button class="back" data-back>‹ Назад</button>
+    <h1>🏆 Мои конкурсы</h1>
+    <div id="ctList"></div>
+  </section>
+
+  <!-- Карточка конкурса -->
+  <section id="v-detail" class="hidden">
+    <button class="back" data-back>‹ Назад</button>
+    <div id="detail"></div>
+  </section>
+
+  <!-- Настройки -->
+  <section id="v-settings" class="hidden">
+    <button class="back" data-back data-i18n="back">‹ Назад</button>
+    <h1 class="set-h" data-i18n="settings">Настройки</h1>
+
+    <div class="set-block">
+      <div class="set-title" data-i18n="theme">Тема</div>
+      <div class="set-sub" data-i18n="presets">Готовые темы</div>
+      <div class="themes" id="themes"></div>
+      <div class="set-sub" data-i18n="cardStyle">Стиль карточек</div>
+      <div class="glass-opts" id="glassOpts"></div>
+      <div class="set-sub" data-i18n="wallpaper">Свой фон</div>
+      <div id="wallBox"></div>
+      <div class="set-sub" data-i18n="lights">Свет</div>
+      <div class="mode-opts" id="lightModes"></div>
+      <button class="light-toggle" id="lightColor"></button>
+    </div>
+
+    <div class="set-block">
+      <div class="set-title" data-i18n="lang">Язык</div>
+      <div class="lang-opts" id="langOpts"></div>
+    </div>
+  </section>
+
+  <section id="v-game" class="hidden">
+    <button class="back" data-back>‹ Назад</button>
+    <div id="bbDeco"></div>
+    <div id="bbFlash"></div>
+    <div class="bb-head">
+      <div><div class="bb-title">Блоки</div><div class="bb-best" id="bbBest"></div></div>
+      <div class="bb-scorebox">
+        <div class="bb-scorerow"><div class="bb-score" id="bbScore">0</div></div>
+        <button class="bb-top-btn" id="bbTopBtn">🏆 Топ</button>
+      </div>
+    </div>
+    <div class="bb-wrap">
+      <div class="bb-board" id="bbBoard"></div>
+      <div class="bb-popup" id="bbPopup"></div>
+      <div class="bb-noroom" id="bbNoRoom">Мест нет</div>
+    </div>
+    <div class="bb-tray" id="bbTray"></div>
+    <button class="bb-btn" id="bbRestart">Новая игра</button>
+    <div class="bb-over hidden" id="bbOver">
+      <div class="bb-over-box">
+        <div class="bb-over-t">Игра окончена</div>
+        <div class="bb-over-score" id="bbOverScore"></div>
+        <button class="bb-btn" id="bbAgain">Ещё раз</button>
+      </div>
+    </div>
+    <div class="bb-over hidden" id="bbTopModal">
+      <div class="bb-over-box bb-top-box">
+        <div class="bb-over-t">Топ игроков</div>
+        <div class="bb-top" id="bbTop"></div>
+        <button class="bb-btn" id="bbTopClose">Закрыть</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="v-stats" class="hidden">
+    <button class="back" data-back>‹ Назад</button>
+    <div id="statsBody"></div>
+  </section>
+
+  <section id="v-create" class="hidden">
+    <div id="wiz"></div>
+  </section>
+
+</div>
+
+<!-- модальное подтверждение и уведомления -->
+<div class="modal hidden" id="modal">
+  <div class="mbox">
+    <p id="mtxt"></p>
+    <div class="mbtns"><button id="mNo">Остаться</button><button id="mYes">Да</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<input type="file" id="mediaInput" accept="image/*,video/*" hidden>
+<div class="sheet-wrap hidden" id="sheetWrap">
+  <div class="sheet-bg" id="sheetBg"></div>
+  <div class="sheet">
+    <div class="sheet-grip"></div>
+    <div class="sheet-title" id="sheetTitle"></div>
+    <div class="sheet-list" id="sheetList"></div>
+  </div>
+</div>
+
+<script>
+const tg = window.Telegram?.WebApp; tg?.ready(); tg?.expand();
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const R = n => Math.floor(Math.random()*n);
+const pick = a => a[R(a.length)];
+const pad = n => String(n).padStart(2,'0');
+const clone = o => JSON.parse(JSON.stringify(o));
+const haptic = (t='light') => { try { tg?.HapticFeedback?.impactOccurred(t); } catch(_){} };
+const notify = (t='error') => { try { tg?.HapticFeedback?.notificationOccurred(t); } catch(_){} };
+const wobble = el => { if(!el) return; el.classList.remove('wobble'); void el.offsetWidth; el.classList.add('wobble'); };
+
+/* ---------- модальное окно вместо confirm (confirm в Telegram не работает) ---------- */
+function ask(text, yesText, onYes){
+  $('mtxt').textContent = text;
+  $('mYes').textContent = yesText;
+  $('modal').classList.remove('hidden');
+  $('mYes').onclick = () => { closeAsk(); onYes(); };
+  $('mNo').onclick = closeAsk;
+  $('modal').onclick = e => { if (e.target === $('modal')) closeAsk(); };
+}
+function closeAsk(){ $('modal').classList.add('hidden'); }
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+/* ---------- темы ---------- */
+const THEMES = {
+  night:  {name:'Ночь',    wall:'#17212b', fg:'#f5f5f5', hint:'#8fa1b3', btn:'#5288c1', btnfg:'#fff', card:'rgba(255,255,255,.07)'},
+  ocean:  {name:'Океан',   wall:'linear-gradient(160deg,#0f2027,#203a43 50%,#2c5364)', fg:'#f0fbff', hint:'#a7c7d6', btn:'#38bdf8', btnfg:'#06222d', card:'rgba(255,255,255,.08)'},
+  sunset: {name:'Закат',   wall:'linear-gradient(160deg,#3b1f4a,#b5476c 55%,#f0a04b)', fg:'#fff8f2', hint:'#ffd9c2', btn:'#fb7185', btnfg:'#fff', card:'rgba(255,255,255,.12)'},
+  forest: {name:'Лес',     wall:'linear-gradient(160deg,#0b2e26,#134e3a 55%,#0f766e)', fg:'#eafff6', hint:'#9fd9c3', btn:'#34d399', btnfg:'#052e1f', card:'rgba(255,255,255,.08)'},
+  neon:   {name:'Неон',    wall:'linear-gradient(160deg,#1e0836,#6d28d9 55%,#db2777)', fg:'#fff', hint:'#e9b8ff', btn:'#f0abfc', btnfg:'#2a0a3a', card:'rgba(255,255,255,.1)'},
+  candy:  {name:'Конфета', wall:'linear-gradient(160deg,#ffd6e8,#d6c7ff 55%,#c4f1ff)', fg:'#2a1a3d', hint:'#6b5b7a', btn:'#a855f7', btnfg:'#fff', card:'rgba(255,255,255,.55)'},
+  mono:   {name:'Графит',  wall:'linear-gradient(160deg,#0b0b0f,#27272a)', fg:'#f4f4f5', hint:'#a1a1aa', btn:'#e5e7eb', btnfg:'#111', card:'rgba(255,255,255,.06)'}
+};
+function applyTheme(key){
+  const t = THEMES[key] || THEMES.night;
+  const r = document.documentElement.style;
+  r.setProperty('--wall', t.wall); r.setProperty('--fg', t.fg); r.setProperty('--hint', t.hint);
+  r.setProperty('--btn', t.btn); r.setProperty('--btnfg', t.btnfg); r.setProperty('--card', t.card);
+  document.body.style.animation = t.wall.includes('gradient') ? 'wallShift 22s ease-in-out infinite' : 'none';
+  try { localStorage.setItem('contest-theme', key); } catch(_){}
+  document.querySelectorAll('.theme').forEach(el => el.classList.toggle('sel', el.dataset.theme === key));
+}
+function getTheme(){ try { return localStorage.getItem('contest-theme') || 'night'; } catch(_){ return 'night'; } }
+function renderThemes(){
+  const cur = getTheme();
+  $('themes').innerHTML = Object.entries(THEMES).map(([k,t]) => `
+    <button class="theme ${k===cur?'sel':''}" data-theme="${k}">
+      <div class="sw-bg" style="background:${t.wall}"></div>
+      <div class="nm">${t.name}</div>
+    </button>`).join('');
+}
+$('themes').addEventListener('click', e => {
+  const b = e.target.closest('[data-theme]'); if (!b) return;
+  haptic('medium');
+  applyTheme(b.dataset.theme);
+  saveWall(null);
+  applyWall(null);
+  renderWall();
+});
+
+/* ---------- тестовые данные (в проде — с бэкенда) ---------- */
+let CHANNELS = [];  // загружаются с сервера
+const CAPS = [
+  ['random','🎲 Случайная'], ['emoji','😀 Эмодзи'], ['digits','🔢 Цифры'],
+  ['math','➕ Пример'], ['odd','🧩 Лишний предмет'], ['color','🎨 Цвет текста']
+];
+const EMPTY = () => ({
+  type:'standard', name:'', lang:'ru', text:'', btnText:'Участвовать', btnCustom:false, postBtnColor:'default', appBtnColor:'default',
+  publish:[], resultsInPost:false, subs:[],
+  invite:false, stories:false, boosts:false,
+  startNow:true, start:'', end:'',
+  winners:1, contact:'',
+  captcha:false, captchaType:'random',
+  counter:false, premiumOnly:false, rtlBlock:false, excludeUnsub:false,
+  participation:'chat', endMode:'manual', endCount:0
+});
+const mk = o => Object.assign(EMPTY(), o);
+let CONTESTS = [];  // загружаются с сервера
+const STATUS = {
+  active:  {text:'Активен',  cls:'b-active'},
+  finished:{text:'Завершён', cls:'b-finished'},
+  draft:   {text:'Черновик', cls:'b-draft'}
+};
+
+/* ---------- кубик в шапке: крутится ---------- */
+const PIPS = {1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
+[[1,'f1'],[6,'f6'],[2,'f2'],[5,'f5'],[3,'f3'],[4,'f4']].forEach(([n,c]) => {
+  const d = document.createElement('div'); d.className = 'mf ' + c;
+  for (let i = 0; i < 9; i++){ const p = document.createElement('i'); if (PIPS[n].includes(i)) p.className = 'on'; d.appendChild(p); }
+  $('die').appendChild(d);
+});
+
+/* ---------- фразы ---------- */
+const PHRASES = [
+  'Честные розыгрыши прямо в Telegram',
+  'Один клик — и ты в игре 🎲',
+  'Подписки, бусты и приглашения',
+  'Победители выбираются случайно',
+  'Твой следующий розыгрыш начинается здесь ✨'
+];
+let phraseIdx = 0;
+$('tag').textContent = PHRASES[0];
+setInterval(() => {
+  const tag = $('tag');
+  tag.classList.add('out');
+  setTimeout(() => {
+    phraseIdx = (phraseIdx + 1) % PHRASES.length;
+    tag.textContent = PHRASES[phraseIdx];
+    tag.classList.remove('out');
+  }, 300);
+}, 2800);
+
+/* ---------- фоновые искры ---------- */
+
+
+/* ---------- отклик на нажатие ---------- */
+document.addEventListener('pointerdown', e => {
+  const el = e.target && e.target.closest ? e.target.closest('button,.menu-item,.chk,.card-opt,.chip,.item') : null;
+  if (!el || el.disabled) return;
+  haptic('light');
+  const r = el.getBoundingClientRect();
+  const s = document.createElement('span');
+  const size = Math.max(r.width, r.height) * 2;
+  s.className = 'ripple';
+  s.style.width = s.style.height = size + 'px';
+  s.style.left = (e.clientX - r.left - size/2) + 'px';
+  s.style.top  = (e.clientY - r.top  - size/2) + 'px';
+  el.appendChild(s);
+  setTimeout(() => s.remove(), 600);
+});
+
+/* запрет масштабирования двойным тапом и щипком */
+document.addEventListener('dblclick', e => e.preventDefault(), {passive:false});
+['gesturestart','gesturechange','gestureend'].forEach(ev =>
+  document.addEventListener(ev, e => e.preventDefault(), {passive:false}));
+
+/* ---------- навигация ---------- */
+const views = ['v-menu','v-channels','v-contests','v-detail','v-settings','v-create','v-join','v-game','v-stats'];
+let current = 'v-menu';
+let step = 0, draft = null, editingId = null, curId = null, calView = {};
+let mediaFile = null, mediaURL = '';
+
+function show(id){
+  const prevId = current;
+  current = id;
+  const prev = $(prevId), el = $(id);
+  if (prevId !== id && prev && !prev.classList.contains('hidden')){
+    prev.classList.remove('view-in');
+    prev.classList.add('view-out');
+    setTimeout(() => {
+      prev.classList.remove('view-out');
+      if (current !== prevId) prev.classList.add('hidden');
+    }, 200);
+  }
+  el.classList.remove('hidden','view-out');
+  if (prevId !== id){ el.classList.remove('view-in'); void el.offsetWidth; el.classList.add('view-in'); }
+  if (tg?.BackButton) id === 'v-menu' ? tg.BackButton.hide() : tg.BackButton.show();
+  window.scrollTo(0, 0);
+}
+/* «назад» из любого экрана: мастер → шаг назад (или выход), карточка → список, остальное → меню */
+function goBack(){
+  if (current === 'v-create'){
+    if (step > 0){ step--; renderStep(-1); return; }
+    ask(editingId ? 'Выйти? Изменения не сохранятся' : 'Выйти? Введённое не сохранится', 'Выйти',
+      () => show(editingId ? 'v-detail' : 'v-menu'));
+    return;
+  }
+  if (current === 'v-detail'){ renderContests(); show('v-contests'); return; }
+  show('v-menu');
+}
+tg?.BackButton?.onClick(goBack);
+document.querySelectorAll('[data-back]').forEach(b => b.onclick = goBack);
+document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => {
+  if (b.dataset.go === 'channels'){ renderChannels(); show('v-channels'); }
+  else { renderContests(); show('v-contests'); }
+});
+$('btnCreate').onclick = () => openCreate(null);
+$('btnSettings').onclick = () => { renderThemes(); renderGlass(); renderWall(); renderLangOpts(); renderLightUI(); show('v-settings'); };
+
+/* ---------- меню: счётчики и списки ---------- */
+function countText(el, label, to){
+  const t0 = performance.now(), dur = 800;
+  (function frame(now){
+    const p = Math.min((now - t0) / dur, 1);
+    el.textContent = label + Math.round(to * (1 - Math.pow(1 - p, 3)));
+    if (p < 1) requestAnimationFrame(frame);
+  })(t0);
+}
+function renderCounts(){
+  if ($('chCount')) countText($('chCount'), 'Подключено: ', CHANNELS.length);
+  if ($('ctCount')) countText($('ctCount'), 'Всего: ', CONTESTS.length);
+  renderCarousels();
+}
+function renderChannels(){
+  $('chList').innerHTML = CHANNELS.length
+    ? CHANNELS.map(c => `<div class="item" data-status="active"><div class="info"><div class="title2">${esc(c.name)}</div><div class="meta">${esc(c.username || 'приватный канал')}</div></div></div>`).join('')
+    : `<div class="empty">Нет подключённых каналов.<br>Добавь бота в канал как администратора.</div>`;
+}
+function renderContests(){
+  $('ctList').innerHTML = CONTESTS.length
+    ? CONTESTS.map(c => `
+      <div class="item" data-status="${c.status}" data-id="${c.id}">
+        <div class="info">
+          <div class="title2">${esc(c.data.name || 'Без названия')}<span class="badge ${STATUS[c.status].cls}">${STATUS[c.status].text}</span></div>
+          <div class="meta">Участников: ${c.participants} · до ${fmtDay(c.data.end)}</div>
+        </div>
+        <span class="chev">›</span>
+      </div>`).join('')
+    : `<div class="empty">Конкурсов пока нет.<br>Нажми «Создать конкурс» в меню.</div>`;
+}
+$('ctList').addEventListener('click', e => {
+  const el = e.target.closest('[data-id]'); if (!el) return;
+  openDetail(Number(el.dataset.id));
+});
+
+/* ---------- карточка конкурса ---------- */
+function findContest(id){ return CONTESTS.find(c => c.id === id); }
+function openDetail(id){
+  const c = findContest(id); if (!c) return;
+  curId = id;
+  const canLaunch = c.status !== 'active' && c.status !== 'finished';
+  $('detail').innerHTML = `
+    <div class="dhead"><div class="dtitle">${esc(c.data.name || 'Без названия')}</div>
+      <span class="badge ${STATUS[c.status].cls}">${STATUS[c.status].text}</span></div>
+    <div class="sum">${rowsFor(c.data, c.participants).map(([k,v]) => `<div><span>${k}</span><b>${esc(v)}</b></div>`).join('')}</div>
+    ${canLaunch ? `<button class="act a-green" id="dLaunch">🚀 Запустить конкурс</button>` : ''}
+    ${c.status === 'active' ? `<button class="act a-blue" id="dFinish">🏁 Завершить и выбрать победителей</button>` : ''}
+    ${c.status === 'finished' ? `<button class="act a-blue" id="dResults">🏆 Проверить результаты</button>` : ''}
+    <button class="act a-blue" id="dStats">📈 Статистика</button>
+    <button class="act a-blue" id="dEdit">✏️ Изменить</button>
+    <button class="act a-red" id="dDelete">🗑 Удалить</button>`;
+  if (canLaunch) $('dLaunch').onclick = () => launch(id);
+  const fin = $('dFinish'); if (fin) fin.onclick = () => finishContest(id);
+  const res = $('dResults'); if (res) res.onclick = () => openJoin(id);
+  $('dStats').onclick = () => openStats(id, '7d');
+  $('dEdit').onclick = () => openCreate(id);
+  $('dDelete').onclick = () => removeContest(id);
+  show('v-detail');
+}
+async function launch(id){
+  try{
+    const res = await apiCall(`/api/contests/${id}/launch`, {method:'POST'});
+    notify('success');
+    toast(`Опубликовано в каналах: ${res.published}`);
+    await loadAll(); openDetail(id);
+  }catch(e){ notify('error'); toast(e.message); }
+}
+async function finishContest(id){
+  try{
+    const res = await apiCall(`/api/contests/${id}/finish`, {method:'POST'});
+    notify('success');
+    toast(res.winners.length ? 'Победители выбраны 🏆' : 'Участников не было');
+    await loadAll(); openDetail(id);
+  }catch(e){ notify('error'); toast(e.message); }
+}
+function removeContest(id){
+  const c = findContest(id); if (!c) return;
+  ask(`Удалить конкурс «${c.data.name || 'Без названия'}»?`, 'Удалить', async () => {
+    try{
+      await apiCall(`/api/contests/${id}`, {method:'DELETE'});
+      notify('warning'); toast('Конкурс удалён');
+      await loadAll(); show('v-contests'); renderContests();
+    }catch(e){ notify('error'); toast(e.message); }
+  });
+}
+
+/* ---------- мастер создания и редактирования ---------- */
+const TITLES = {
+  type:['💡','Тип розыгрыша'],
+  main:['📝','Основные настройки'],
+  media:['🖼','Фото или видео'],
+  publish:['🏁','В каких каналах опубликовать розыгрыш?'],
+  extras:['🎟','Доп. билеты'],
+  dates:['📅','Даты'],
+  winners:['🏆','Победители'],
+  adv:['⚙️','Дополнительно'],
+  summary:['✅','Проверка']
+};
+function stepsList(){
+  return draft.type === 'boost'
+    ? ['type','main','media','publish','subs','dates','winners','adv','summary']
+    : ['type','main','media','publish','subs','dates','winners','adv','summary'];
+}
+function titleOf(key){
+  if (key === 'subs') return draft.type === 'boost'
+    ? ['⚡','Какие каналы бустят участники?']
+    : ['📁','На какие каналы нужно подписаться участникам?'];
+  return TITLES[key];
+}
+function monthOf(v){ const d = parseDT(v) || new Date(); return {y:d.getFullYear(), m:d.getMonth()}; }
+function openCreate(id){
+  if (id){
+    const c = findContest(id);
+    draft = clone(c.data);
+    editingId = id;
+  } else {
+    draft = EMPTY();
+    editingId = null;
+  }
+  calView = {start: monthOf(draft.start), end: monthOf(draft.end)};
+  step = 0;
+  show('v-create');
+  renderStep(0);
+}
+function renderStep(dir = 0){
+  const list = stepsList();
+  const key = list[step];
+  const [emo, title] = titleOf(key);
+  const isLast = key === 'summary';
+  const wiz = $('wiz');
+  wiz.innerHTML = `
+    <div class="dots">${list.map((_, i) => `<i class="${i === step ? 'on' : (i < step ? 'done' : '')}"></i>`).join('')}</div>
+    <div class="stepEmoji">${emo}</div>
+    <div class="stepTitle">${title}</div>
+    <div>${BODY[key]()}</div>
+    <p class="err" id="err"></p>
+    <div class="wiz-btns">
+      <button class="b-white" id="bBack">Назад</button>
+      ${isLast
+        ? `<button class="b-red" id="bCancel">Отменить</button><button class="b-blue" id="bNext">${editingId ? 'Сохранить' : 'Создать'}</button>`
+        : `<button class="b-blue" id="bNext">Вперед</button>`}
+    </div>`;
+  if (dir !== 0){
+    wiz.classList.remove('st-fwd','st-back'); void wiz.offsetWidth;
+    wiz.classList.add(dir > 0 ? 'st-fwd' : 'st-back');
+  }
+  $('bBack').onclick = goBack;
+  $('bNext').onclick = next;
+  if (isLast) $('bCancel').onclick = cancelCreate;
+}
+
+/* ---------- календарь ---------- */
+const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const WD = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+function parseDT(v){ if (!v) return null; const d = new Date(v); return isNaN(d) ? null : d; }
+function ymd(y, m, d){ return `${y}-${pad(m+1)}-${pad(d)}`; }
+function timeOf(v){ const d = parseDT(v); return d ? `${pad(d.getHours())}:${pad(d.getMinutes())}` : '12:00'; }
+function calendarHTML(key){
+  const cv = calView[key];
+  const sel = parseDT(draft[key]);
+  const first = new Date(cv.y, cv.m, 1);
+  const offset = (first.getDay() + 6) % 7;
+  const days = new Date(cv.y, cv.m + 1, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+  let cells = '';
+  for (let i = 0; i < offset; i++) cells += '<span></span>';
+  for (let d = 1; d <= days; d++){
+    const dt = new Date(cv.y, cv.m, d);
+    const isSel = sel && dt.getFullYear() === sel.getFullYear() && dt.getMonth() === sel.getMonth() && dt.getDate() === sel.getDate();
+    const isToday = dt.getTime() === today.getTime();
+    const past = dt < today;
+    cells += `<button class="day ${isSel?'sel':''} ${isToday?'today':''}" data-cal="${key}" data-day="${ymd(cv.y, cv.m, d)}" ${past?'disabled':''}>${d}</button>`;
+  }
+  const hh = sel ? sel.getHours() : 12;
+  const mm = sel ? sel.getMinutes() : 0;
+  const dis = sel ? '' : 'disabled';
+  return `
+    <div class="cal">
+      <div class="cal-head">
+        <button class="nav" data-nav="${key}" data-dir="-1">‹</button>
+        <b>${MONTHS[cv.m]} ${cv.y}</b>
+        <button class="nav" data-nav="${key}" data-dir="1">›</button>
+      </div>
+      <div class="grid7">${WD.map(w => `<span class="wd">${w}</span>`).join('')}</div>
+      <div class="grid7" style="margin-top:4px">${cells}</div>
+      <div class="timepick">
+        <button class="tbtn" data-tpick="${key}:h" ${dis}>${pad(hh)}</button>
+        <span class="colon">:</span>
+        <button class="tbtn" data-tpick="${key}:m" ${dis}>${pad(mm)}</button>
+      </div>
+      <div class="calsum">${sel ? 'Выбрано: ' + fmt(draft[key]) : 'Выбери день в календаре'}</div>
+    </div>`;
+}
+
+/* цвет кнопки в посте: только варианты, которые умеет Telegram для inline-кнопок */
+const POST_COLORS = [
+  ['default','Белый','#e5e8ee','#1f2933','none'],
+  ['primary','Синий','#0a7cff','#ffffff','primary'],
+  ['success','Зелёный','#22c55e','#ffffff','success'],
+  ['danger','Красный','#e53935','#ffffff','danger']
+];
+/* цвет кнопки в самом мини-приложении */
+const APP_COLORS = [
+  ['default','Обычный','linear-gradient(135deg,#6b7a8c,#3d4a59)'],
+  ['blue','Синий','#0a7cff'],
+  ['green','Зелёный','#22c55e'],
+  ['red','Красный','#e53935'],
+  ['purple','Фиолетовый','#8b5cf6'],
+  ['orange','Оранжевый','#f97316'],
+  ['pink','Розовый','#ec4899'],
+  ['teal','Бирюзовый','#14b8a6']
+];
+const BTN_TEXT_PRESETS = ['Участвовать','Принять участие','Участвую!'];
+const postColor = k => POST_COLORS.find(c => c[0] === k) || POST_COLORS[0];
+const appColor  = k => APP_COLORS.find(c => c[0] === k) || APP_COLORS[0];
+
+const BODY = {
+  type: () => [
+    ['standard','📑 Стандартный','Пользователям необходимо подписаться на каналы для участия'],
+    ['boost','⚡ За бусты','Пользователям необходимо отдать буст каналу для участия']
+  ].map(([v,t,d]) => `<button class="card-opt ${draft.type === v ? 'sel' : ''}" data-type="${v}"><div>${t}</div><div class="d">${d}</div></button>`).join(''),
+
+  main: () => `
+    <div class="field"><label>Название</label><input type="text" data-k="name" value="${esc(draft.name)}" placeholder="Розыгрыш биткоинов"></div>
+    <div class="field"><label>Язык розыгрыша</label>
+      <button class="dd" data-dd="lang"><span>${draft.lang === 'en' ? 'English' : 'Русский'}</span><span class="chev">⌄</span></button>
+    </div>
+    <div class="field"><label>Текст поста розыгрыша</label><textarea rows="4" data-k="text" placeholder="Что разыгрываем и как участвовать">${esc(draft.text)}</textarea></div>
+
+    <div class="field"><label>Текст кнопки поста</label>
+      <div class="chips">${BTN_TEXT_PRESETS.map(c =>
+        `<button class="chip ${!draft.btnCustom && draft.btnText === c ? 'sel' : ''}" data-chip="${c}">${c}</button>`).join('')}<button class="chip ${draft.btnCustom ? 'sel' : ''}" data-custom="1">✏️ Свой</button></div>
+      ${draft.btnCustom ? `<div class="pen"><span>✏️</span><input type="text" data-k="btnText" maxlength="32" value="${esc(draft.btnText)}" placeholder="Напиши свой текст кнопки"></div>` : ''}
+    </div>
+
+    <div class="field"><label>Цвет кнопки в посте канала</label>
+      <div class="swatches">${POST_COLORS.map(([k,n,bg,fg]) => `
+        <button class="sw-c ${draft.postBtnColor === k ? 'sel' : ''}" data-pcolor="${k}">
+          <span class="dot" style="background:${bg};color:${fg}">${draft.postBtnColor === k ? '✓' : ''}</span><span>${n}</span>
+        </button>`).join('')}</div>
+    </div>
+    <div class="preview postprev" style="background:${postColor(draft.postBtnColor)[2]};color:${postColor(draft.postBtnColor)[3]}">${esc(draft.btnText || 'Текст кнопки')}</div>
+
+    <div class="field"><label>Цвет кнопки в мини-приложении</label>
+      <div class="swatches">${APP_COLORS.map(([k,n,css]) => `
+        <button class="sw-c ${draft.appBtnColor === k ? 'sel' : ''}" data-acolor="${k}">
+          <span class="dot" style="background:${css}">${draft.appBtnColor === k ? '✓' : ''}</span><span>${n}</span>
+        </button>`).join('')}</div>
+    </div>
+    <div class="preview" style="background:${appColor(draft.appBtnColor)[2]}">${esc(draft.btnText || 'Текст кнопки')}</div>`,
+
+  media: () => {
+    if (!draft.media) return `
+      <button class="media-drop" data-media-pick>
+        <span class="big">🖼</span>
+        <span>Выбрать фото или видео</span>
+        <small>Необязательно. Фото до 10 МБ, видео до 50 МБ.<br>Подпись к посту: до 1024 символов.</small>
+      </button>`;
+    const isVideo = draft.media.kind === 'video';
+    const media = isVideo
+      ? `<video src="${mediaURL}" controls playsinline muted></video>`
+      : `<img src="${mediaURL}" alt="">`;
+    return `
+      <div class="media-box">${mediaURL ? media : ''}</div>
+      <div class="media-meta"><span>${isVideo ? '🎬' : '🖼'} ${esc(draft.media.name)}</span>
+        <div class="media-actions">
+          <button class="m-change" data-media-pick>Заменить</button>
+          <button class="m-remove" data-media-del>Удалить</button>
+        </div>
+      </div>
+      ${mediaFile ? '' : '<p class="hint">Файл уже прикреплён, но в этой сессии не загружен. Выбери его заново, чтобы отправить.</p>'}`;
+  },
+
+  publish: () => `
+    ${channelList('publish')}
+    <div class="row"><div class="top"><span>Итоги в стартовом посте</span><input type="checkbox" class="sw" data-t="resultsInPost" ${draft.resultsInPost?'checked':''}></div></div>
+    <p class="hint">Розыгрыш будет опубликован в выбранных каналах.</p>`,
+
+  subs: () => draft.type === 'boost'
+    ? `${channelList('subs')}<p class="hint">За каждый буст участник получает доп. билет (максимум 10).</p>`
+    : `${channelList('subs')}<p class="warn ${draft.subs.length ? 'hidden' : ''}" id="warn">❌ Не выбрано ни одного канала: розыгрыш пройдёт без проверки подписки.</p>`,
+
+  extras: () => [
+    toggleRow('invite','Приглашение друзей','Участники приглашают друзей по своей ссылке и получают доп. билеты. Лимит: 10000 приглашений на одного пользователя.'),
+    toggleRow('stories','Постинг сторис','За публикацию розыгрыша в сторис участник получает доп. билет. Бот не проверяет выполнение. Постить сторис могут только пользователи Telegram Premium.'),
+    toggleRow('boosts','Бусты каналов','Участник получает доп. билет за каждый буст выбранных каналов (максимум 10).')
+  ].join(''),
+
+  dates: () => `
+    <div class="row"><div class="top"><span>Начать сразу</span><input type="checkbox" class="sw" data-t="startNow" ${draft.startNow?'checked':''}></div></div>
+    ${draft.startNow ? '' : `<p class="hint" style="margin:4px 0">Дата начала</p>${calendarHTML('start')}`}
+    <p class="hint" style="margin:4px 0">Дата окончания</p>
+    <div class="quick">${QUICK.map(([m,l]) => `<button class="chip" data-quick="${m}">${l}</button>`).join('')}</div>
+    ${calendarHTML('end')}
+    <p class="hint">Бот работает по московскому времени (GMT+3).</p>`,
+
+  winners: () => `
+    <div class="field"><label>Количество победителей (от 1 до 100)</label>
+      <div class="stepper"><button data-step="-1" ${draft.winners <= 1 ? 'disabled' : ''}>−</button><span class="sv" data-wnum="1">${draft.winners}</span><button data-step="1" ${draft.winners >= 100 ? 'disabled' : ''}>+</button></div>
+    </div>
+    <p class="hint">Нажми на число, чтобы ввести своё количество.</p>
+    <div class="field"><label>Контакт для связи (необязательно)</label><input type="text" data-k="contact" value="${esc(draft.contact)}" placeholder="@username"></div>
+    <p class="hint">Победители выбираются случайно в конце розыгрыша. Контакт отправится им ботом.</p>`,
+
+  adv: () => `
+    <div class="set-sub" style="margin-top:0">Где участвуют</div>
+    <div class="chips">
+      <button class="chip ${draft.participation !== 'app' ? 'sel' : ''}" data-part="chat">💬 В чате</button>
+      <button class="chip ${draft.participation === 'app' ? 'sel' : ''}" data-part="app">📱 В мини-приложении</button>
+    </div>
+    ${toggleRow('counter','Счётчик участников на кнопке','Число участников показывается на кнопке в посте.')}
+    ${toggleRow('premiumOnly','Только для Premium','Участвовать смогут только пользователи Telegram Premium.')}
+    ${toggleRow('rtlBlock','Запрет RTL-имён','Нельзя участвовать с арабскими или ивритскими буквами в имени.')}
+    ${toggleRow('excludeUnsub','Исключение за отписку','Если участник отписался от канала, его исключат из розыгрыша.')}
+    ${toggleRow('captcha','Капча для участия','Капча проверяет участника перед тем, как он попадёт в розыгрыш.')}
+    ${draft.captcha ? `<div class="field"><label>Вид капчи</label><div class="chips">${CAPS.map(([v,t]) => `<button class="chip ${draft.captchaType===v?'sel':''}" data-cap="${v}">${t}</button>`).join('')}</div></div>` : ''}`,
+
+  summary: () => `<div class="sum">${rowsFor(draft).map(([k,v]) => `<div><span>${k}</span><b>${esc(v)}</b></div>`).join('')}</div>`
+};
+
+function rowsFor(d, participants){
+  const extras = [d.invite && 'приглашения', d.stories && 'сторис', d.boosts && 'бусты'].filter(Boolean).join(', ') || 'нет';
+  const rows = [['Название', d.name || '—']];
+  if (participants !== undefined) rows.push(['Участников', participants]);
+  rows.push(
+    ['Тип', d.type === 'boost' ? 'За бусты' : 'Стандартный'],
+    ['Язык', d.lang === 'ru' ? 'Русский' : 'English'],
+    ['Медиа', d.media ? `${d.media.kind === 'video' ? 'Видео' : 'Фото'}: ${d.media.name}` : 'Нет'],
+    ['Текст кнопки', d.btnText || '—'],
+    ['Цвет в посте', postColor(d.postBtnColor)[1]],
+    ['Цвет в приложении', appColor(d.appBtnColor)[1]],
+    ['Публикация', names(d.publish) || '—'],
+    ['Итоги в посте', d.resultsInPost ? 'Да' : 'Нет'],
+    [d.type === 'boost' ? 'Каналы бустов' : 'Каналы подписки', names(d.subs) || 'Не выбраны']
+  );
+  rows.push(
+    ['Участие', d.participation === 'app' ? 'в мини-приложении' : 'в чате'],
+    ['Счётчик на кнопке', d.counter ? 'да' : 'нет'],
+    ['Только Premium', d.premiumOnly ? 'да' : 'нет'],
+    ['Запрет RTL-имён', d.rtlBlock ? 'да' : 'нет'],
+    ['Исключение за отписку', d.excludeUnsub ? 'да' : 'нет']
+  );
+  rows.push(
+    ['Начало', d.startNow ? 'Сразу' : fmt(d.start)],
+    ['Окончание', fmt(d.end)],
+    ['Победителей', d.winners],
+    ['Капча', d.captcha ? (CAPS.find(c => c[0] === d.captchaType)?.[1] || 'Да') : 'Нет']
+  );
+  return rows;
+}
+
+function channelList(key){
+  return CHANNELS.map(c => `
+    <label class="chk">
+      <span class="avatar">${esc(c.name[0])}</span>
+      <span class="nm">${esc(c.name)}<small>${esc(c.username || 'приватный канал')}</small></span>
+      <input class="hid" type="checkbox" data-ch="${key}" data-id="${c.id}" ${draft[key].includes(c.id) ? 'checked' : ''}><span class="tick">✓</span>
+    </label>`).join('');
+}
+function toggleRow(key, title, desc){
+  return `<div class="row">
+    <div class="top"><span>${title}</span><input type="checkbox" class="sw" data-t="${key}" ${draft[key] ? 'checked' : ''}></div>
+    <p class="hint">${desc}</p>
+  </div>`;
+}
+function names(ids){ return ids.map(i => CHANNELS.find(c => c.id === i)?.name).filter(Boolean).join(', '); }
+function fmt(v){ const d = parseDT(v); return d ? d.toLocaleString('ru-RU',{dateStyle:'short',timeStyle:'short'}) : '—'; }
+function fmtDay(v){ const d = parseDT(v); return d ? d.toLocaleDateString('ru-RU') : '—'; }
+
+/* события мастера (делегирование) */
+$('wiz').addEventListener('input', onField);
+$('wiz').addEventListener('change', onField);
+$('wiz').addEventListener('click', e => {
+  const t = e.target.closest('[data-type],[data-chip],[data-cap],[data-day],[data-nav],[data-pcolor],[data-acolor],[data-custom],[data-dd],[data-tpick],[data-step],[data-quick],[data-wnum],[data-media-pick],[data-media-del],[data-part]');
+  if (!t) return;
+  if (t.hasAttribute('data-media-pick') || t.closest('[data-media-pick]')){ $('mediaInput').click(); return; }
+  if (t.hasAttribute('data-media-del') || t.closest('[data-media-del]')){
+    if (mediaURL) URL.revokeObjectURL(mediaURL);
+    mediaFile = null; mediaURL = ''; draft.media = null;
+    renderStep(0); return;
+  }
+  if (t.dataset.quick){ applyQuick(Number(t.dataset.quick)); return; }
+  if (t.dataset.wnum){
+    openSheet('Победителей', [], draft.winners, v => { draft.winners = v; renderStep(0); },
+      {manual:{min:1, max:100, hint:'Количество победителей: от 1 до 100'}});
+    return;
+  }
+  if (t.dataset.dd === 'lang'){
+    openSheet('Язык розыгрыша', [{v:'ru', label:'Русский'}, {v:'en', label:'English'}], draft.lang, v => { draft.lang = v; renderStep(0); });
+    return;
+  }
+  if (t.dataset.tpick){
+    const [key, part] = t.dataset.tpick.split(':');
+    const cur = parseDT(draft[key]); if (!cur) return;
+    if (part === 'h'){
+      const opts = Array.from({length:24}, (_, i) => ({v:i, label:pad(i)}));
+      openSheet('Часы', opts, cur.getHours(), v => setTime(key, 'h', v), {grid:true, manual:{min:0, max:23, hint:'Часы: от 0 до 23'}});
+    } else {
+      const opts = Array.from({length:60}, (_, i) => ({v:i, label:pad(i)}));
+      openSheet('Минуты', opts, cur.getMinutes(), v => setTime(key, 'm', v), {grid:true, manual:{min:0, max:59, hint:'Минуты: от 0 до 59'}});
+    }
+    return;
+  }
+  if (t.dataset.step){
+    draft.winners = Math.min(100, Math.max(1, (draft.winners || 1) + Number(t.dataset.step)));
+    haptic('soft');
+    renderStep(0);
+    return;
+  }
+  if (t.dataset.pcolor){ draft.postBtnColor = t.dataset.pcolor; haptic('soft'); renderStep(0); return; }
+  if (t.dataset.acolor){ draft.appBtnColor = t.dataset.acolor; haptic('soft'); renderStep(0); return; }
+  if (t.dataset.custom){ draft.btnCustom = true; draft.btnText = ''; renderStep(0); return; }
+  if (t.dataset.type){ draft.type = t.dataset.type; renderStep(0); }
+  else if (t.dataset.chip){ draft.btnText = t.dataset.chip; draft.btnCustom = false; renderStep(0); }
+  else if (t.dataset.part){ draft.participation = t.dataset.part; renderStep(0); }
+  else if (t.dataset.cap){ draft.captchaType = t.dataset.cap; renderStep(0); }
+  else if (t.dataset.day){
+    const key = t.dataset.cal;
+    draft[key] = `${t.dataset.day}T${timeOf(draft[key])}`;
+    haptic('soft');
+    renderStep(0);
+  }
+  else if (t.dataset.nav){
+    const key = t.dataset.nav, cv = calView[key];
+    const d = new Date(cv.y, cv.m + Number(t.dataset.dir), 1);
+    calView[key] = {y: d.getFullYear(), m: d.getMonth()};
+    renderStep(0);
+  }
+});
+function onField(e){
+  const t = e.target;
+  if (t.dataset.k) draft[t.dataset.k] = t.value;
+  if (t.dataset.k === 'btnText'){ document.querySelectorAll('.preview').forEach(p => p.textContent = draft.btnText || 'Текст кнопки'); }
+  if (t.dataset.n) draft[t.dataset.n] = Number(t.value);
+  if (t.dataset.time){
+    const key = t.dataset.time;
+    const cur = parseDT(draft[key]);
+    if (!cur) return;
+    let h = cur.getHours(), mi = cur.getMinutes();
+    if (t.dataset.part === 'h') h = Number(t.value); else mi = Number(t.value);
+    draft[key] = `${draft[key].slice(0,10)}T${pad(h)}:${pad(mi)}`;
+    renderStep(0);
+    return;
+  }
+  if (t.dataset.t){
+    draft[t.dataset.t] = t.checked;
+    haptic('soft');
+    if (['startNow','captcha'].includes(t.dataset.t)) renderStep(0);
+  }
+  if (t.dataset.ch){
+    const arr = draft[t.dataset.ch], id = Number(t.dataset.id), i = arr.indexOf(id);
+    if (t.checked && i < 0) arr.push(id);
+    if (!t.checked && i >= 0) arr.splice(i, 1);
+    const w = $('warn'); if (w) w.classList.toggle('hidden', draft.subs.length > 0);
+  }
+}
+
+/* проверка шага */
+function validate(key){
+  if (key === 'main'){
+    if (!draft.name.trim()) return 'Введи название розыгрыша';
+    if (!draft.text.trim()) return 'Добавь текст поста';
+  }
+  if (key === 'media' && draft.media && draft.text.length > 1024) return 'С фото или видео подпись до 1024 символов. Сократи текст поста';
+  if (key === 'publish' && !draft.publish.length) return 'Выбери хотя бы один канал для публикации';
+  if (key === 'subs' && draft.type === 'boost' && !draft.subs.length) return 'Выбери канал для бустов';
+  if (key === 'dates'){
+    if (!draft.startNow && !draft.start) return 'Выбери дату начала в календаре';
+    if (!draft.end) return 'Выбери дату окончания в календаре';
+    const s = draft.startNow ? Date.now() : parseDT(draft.start).getTime();
+    if (parseDT(draft.end).getTime() <= s) return 'Дата окончания должна быть позже начала';
+  }
+  if (key === 'winners' && (!(draft.winners >= 1) || draft.winners > 100)) return 'Победителей может быть от 1 до 100';
+  return null;
+}
+function next(){
+  const key = stepsList()[step];
+  const error = validate(key);
+  if (error){
+    $('err').textContent = error;
+    wobble($('err'));
+    wobble($('bNext'));
+    notify('error');
+    return;
+  }
+  if (key === 'summary'){ finish(); return; }
+  step++;
+  renderStep(1);
+}
+function cancelCreate(){
+  ask('Отменить изменения?', 'Отменить', () => show(editingId ? 'v-detail' : 'v-menu'));
+}
+async function finish(){
+  try{
+    const body = {settings: clone(draft)};
+    if (editingId) body.id = editingId;
+    const res = await apiCall('/api/contests', {method:'POST', json: body});
+    if (mediaFile){ await uploadMedia(res.id); mediaFile = null; }
+    notify('success');
+    const wasEditing = !!editingId;
+    editingId = null;
+    await loadAll();
+    if (wasEditing){ toast('Изменения сохранены ✅'); openDetail(res.id); }
+    else { toast('Конкурс сохранён как черновик. Запусти его в карточке'); renderContests(); show('v-contests'); }
+  }catch(e){ notify('error'); toast('Не сохранилось: ' + e.message); }
+}
+
+/* выдвижной лист: список, сетка и/или ручной ввод числа */
+function openSheet(title, opts, value, onPick, cfg = {}){
+  const w = $('sheetWrap'), list = $('sheetList');
+  $('sheetTitle').textContent = title;
+  list.className = 'sheet-list' + (cfg.grid ? ' grid' : '');
+  let html = '';
+  if (cfg.manual){
+    html += `<div class="manual"><input id="manIn" type="number" inputmode="numeric" value="${value}" min="${cfg.manual.min}" max="${cfg.manual.max}"><button id="manOk">OK</button></div><p class="manhint">${cfg.manual.hint}</p>`;
+  }
+  html += opts.map(o => `<button class="opt ${o.v == value ? 'sel' : ''}" data-v="${o.v}"><span>${o.label}</span><span class="mark">✓</span></button>`).join('');
+  list.innerHTML = html;
+  list.onclick = e => {
+    const b = e.target.closest('[data-v]'); if (!b) return;
+    const o = opts.find(x => String(x.v) === b.dataset.v); if (!o) return;
+    haptic('soft');
+    closeSheet();
+    setTimeout(() => onPick(o.v), 120);
+  };
+  if (cfg.manual){
+    const inp = $('manIn');
+    const ok = () => {
+      const v = Number(inp.value), m = cfg.manual;
+      if (!Number.isInteger(v) || v < m.min || v > m.max){ wobble(inp); notify('error'); return; }
+      closeSheet();
+      setTimeout(() => onPick(v), 120);
+    };
+    $('manOk').onclick = ok;
+    inp.onkeydown = e => { if (e.key === 'Enter') ok(); };
+  }
+  $('sheetBg').onclick = closeSheet;
+  w.classList.remove('hidden');
+  requestAnimationFrame(() => requestAnimationFrame(() => w.classList.add('open')));
+}
+function closeSheet(){
+  const w = $('sheetWrap');
+  w.classList.remove('open');
+  setTimeout(() => w.classList.add('hidden'), 400);
+}
+function setTime(key, part, v){
+  const cur = parseDT(draft[key]); if (!cur) return;
+  let h = cur.getHours(), mi = cur.getMinutes();
+  if (part === 'h') h = v; else mi = v;
+  draft[key] = `${draft[key].slice(0,10)}T${pad(h)}:${pad(mi)}`;
+  renderStep(0);
+}
+
+/* быстрые интервалы окончания (считаются от старта или от текущего времени) */
+const QUICK = [[3,'3 мин'], [10,'10 мин'], [60,'1 час'], [1440,'1 день'], [10080,'7 дней']];
+function applyQuick(mins){
+  const base = draft.startNow ? new Date() : (parseDT(draft.start) || new Date());
+  const ms = Math.ceil((base.getTime() + mins * 60000) / 60000) * 60000;
+  const d = new Date(ms);
+  draft.end = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  calView.end = {y: d.getFullYear(), m: d.getMonth()};
+  haptic('soft');
+  renderStep(0);
+}
+
+/* загрузка фото и видео */
+const MAX_PHOTO = 10 * 1024 * 1024, MAX_VIDEO = 50 * 1024 * 1024;
+$('mediaInput').addEventListener('change', e => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const isVideo = file.type.startsWith('video/');
+  const isPhoto = file.type.startsWith('image/');
+  if (!isVideo && !isPhoto){ toast('Нужен файл фото или видео'); notify('error'); return; }
+  if (isPhoto && file.size > MAX_PHOTO){ toast('Фото больше 10 МБ'); notify('error'); return; }
+  if (isVideo && file.size > MAX_VIDEO){ toast('Видео больше 50 МБ'); notify('error'); return; }
+  if (mediaURL) URL.revokeObjectURL(mediaURL);
+  mediaFile = file;
+  mediaURL = URL.createObjectURL(file);
+  draft.media = {kind: isVideo ? 'video' : 'photo', name: file.name, size: file.size};
+  haptic('medium');
+  renderStep(0);
+});
+
+/* отправка файла на сервер */
+async function uploadMedia(contestId){
+  if (!mediaFile) return null;
+  const fd = new FormData();
+  fd.append('file', mediaFile);
+  fd.append('contest_id', String(contestId));
+  const r = await fetch(API + '/api/upload', {method:'POST', headers:{'X-Init-Data': tg?.initData || ''}, body: fd});
+  if (!r.ok) throw new Error('upload ' + r.status);
+  return r.json();
+}
+
+/* ---------- стиль карточек ---------- */
+const GLASS = {liquid: 'Жидкое стекло', frost: 'Матовое', soft: 'Мягкое', neon: 'Неон', flat: 'Плоское'};
+function getGlass(){ try { return localStorage.getItem('contest-glass') || 'liquid'; } catch(_){ return 'liquid'; } }
+function applyGlass(key){
+  if (!GLASS[key]) key = 'liquid';
+  document.body.dataset.glass = key;
+  try { localStorage.setItem('contest-glass', key); } catch(_){}
+  renderGlass();
+}
+function renderGlass(){
+  const cur = document.body.dataset.glass || getGlass();
+  $('glassOpts').innerHTML = Object.entries(GLASS).map(([k, n]) =>
+    `<button class="glass-opt ${k === cur ? 'sel' : ''}" data-glass="${k}"><span class="gp gp-${k}"></span>${n}</button>`
+  ).join('');
+}
+$('glassOpts').addEventListener('click', e => {
+  const b = e.target.closest('[data-glass]'); if (!b) return;
+  haptic('medium');
+  applyGlass(b.dataset.glass);
+});
+
+/* ---------- свои обои: градиент и узор ---------- */
+const WALL_COLORS = ['#0f2027','#203a43','#2c5364','#134e3a','#0b2e26','#1e0836','#6d28d9','#db2777',
+  '#ff9a9e','#fecfef','#fbc2eb','#f6d365','#fda085','#ff5e62','#0ea5e9','#14b8a6','#111827','#f5f7fb'];
+const WALL_ANGLES = [0, 45, 90, 135, 180];
+const WALL_PATTERNS = [['none','Без узора'],['stars','Звёзды'],['sparkles','Искры'],
+  ['hearts','Сердца'],['dots','Точки'],['gifts','Подарки'],['waves','Волны'],['cubes','Кубики'],['pizza','Пицца']];
+const WALL_SVG = {
+  stars: '<path d="M22 14L24.5 21L31.5 23.5L24.5 26L22 33L19.5 26L12.5 23.5L19.5 21Z"/><path d="M90 66L91.5 70.5L96 72L91.5 73.5L90 78L88.5 73.5L84 72L88.5 70.5Z"/><circle cx="60" cy="48" r="1.5"/>',
+  sparkles: '<path d="M60 84V96M54 90H66M18 60V70M13 65H23" fill="none" stroke-width="2"/>',
+  hearts: '<path d="M30 36C26 30 18 32 18 39C18 45 30 52 30 52C30 52 42 45 42 39C42 32 34 30 30 36Z"/><path d="M84 84C81 80 75 81 75 86C75 90 84 96 84 96C84 96 93 90 93 86C93 81 87 80 84 84Z"/>',
+  dots: '<circle cx="20" cy="20" r="2"/><circle cx="80" cy="40" r="2"/><circle cx="50" cy="90" r="2"/><circle cx="100" cy="100" r="2"/>',
+  gifts: '<rect x="18" y="52" width="24" height="20" rx="2"/><rect x="15" y="46" width="30" height="7" rx="2"/><rect x="78" y="18" width="22" height="16" rx="2"/><rect x="75" y="13" width="28" height="6" rx="2"/>',
+  waves: '<path d="M8 30q8-7 16 0t16 0t16 0t16 0M8 96q8-7 16 0t16 0t16 0t16 0" fill="none" stroke-width="1.8"/>',
+  cubes: '<path d="M30 20L44 28L44 44L30 52L16 44L16 28ZM30 52V36M16 28L30 36L44 28" fill="none" stroke-width="1.5"/>',
+  pizza: '<path d="M74 60L92 60L83 84Z"/><circle cx="80" cy="66" r="1.6"/><circle cx="85" cy="72" r="1.6"/><circle cx="81" cy="76" r="1.4"/>'
+};
+let wallEdit = null;
+let wallPick = 'a';
+function wallPatternUrl(key){
+  const body = WALL_SVG[key];
+  if (!body) return null;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" fill="#fff" fill-opacity=".22" stroke="#fff" stroke-opacity=".22">${body}</svg>`;
+  return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
+}
+function getWall(){ try { return JSON.parse(localStorage.getItem('contest-wall') || 'null'); } catch(_){ return null; } }
+function saveWall(w){ try { localStorage.setItem('contest-wall', JSON.stringify(w)); } catch(_){} }
+function wallCss(w){
+  const grad = `linear-gradient(${w.angle}deg, ${w.a}, ${w.b})`;
+  const pat = null;  // узоры отключены
+  return pat
+    ? {image: `${pat}, ${grad}`, size: '120px 120px, 100% 100%', repeat: 'repeat, no-repeat', grad}
+    : {image: grad, size: '100% 100%', repeat: 'no-repeat', grad};
+}
+function applyWall(w){
+  const body = document.body;
+  if (!w){
+    body.style.backgroundImage = ''; body.style.backgroundSize = ''; body.style.backgroundRepeat = '';
+    document.documentElement.style.removeProperty('--wall');
+    return;
+  }
+  const c = wallCss(w);
+  document.documentElement.style.setProperty('--wall', c.grad);
+  body.style.backgroundImage = c.image;
+  body.style.backgroundSize = c.size;
+  body.style.backgroundRepeat = c.repeat;
+  body.style.animation = 'none';
+}
+function renderWall(){
+  wallEdit = getWall() || {a: '#0f2027', b: '#2c5364', angle: 135, pattern: 'none'};
+  const c = wallCss(wallEdit);
+  $('wallBox').innerHTML = `
+    <div class="wall-prev" style="background:${c.image.replace(/"/g, "'")};background-size:${c.size};background-repeat:${c.repeat}"></div>
+    <div class="seg">
+      <button class="${wallPick === 'a' ? 'sel' : ''}" data-wpick="a">Цвет 1</button>
+      <button class="${wallPick === 'b' ? 'sel' : ''}" data-wpick="b">Цвет 2</button>
+    </div>
+    <div class="palette">${WALL_COLORS.map(col =>
+      `<button class="pal ${wallEdit[wallPick] === col ? 'sel' : ''}" data-wcol="${col}" style="background:${col}"></button>`).join('')}</div>
+    <div class="angles">${WALL_ANGLES.map(a =>
+      `<button class="${wallEdit.angle === a ? 'sel' : ''}" data-wang="${a}">${a}°</button>`).join('')}</div>
+    <button class="wall-reset" data-wreset="1">Вернуть обычный фон</button>`;
+}
+function commitWall(){
+  saveWall(wallEdit);
+  applyWall(wallEdit);
+  renderWall();
+}
+$('wallBox').addEventListener('click', e => {
+  const t = e.target.closest('[data-wpick],[data-wcol],[data-wang],[data-wpat],[data-wreset]');
+  if (!t) return;
+  haptic('soft');
+  if (t.dataset.wpick){ wallPick = t.dataset.wpick; renderWall(); return; }
+  if (t.dataset.wreset){
+    saveWall(null); applyWall(null); applyTheme(getTheme()); renderWall(); return;
+  }
+  wallEdit = wallEdit || getWall() || {a: '#0f2027', b: '#2c5364', angle: 135, pattern: 'none'};
+  if (t.dataset.wcol) wallEdit[wallPick] = t.dataset.wcol;
+  if (t.dataset.wang) wallEdit.angle = Number(t.dataset.wang);
+  if (t.dataset.wpat) wallEdit.pattern = t.dataset.wpat;
+  commitWall();
+});
+
+/* ---------- связь с сервером ---------- */
+const API = 'https://176-100-39-27.sslip.io';  // сервер бота
+async function apiCall(path, opts = {}){
+  const headers = {'X-Init-Data': tg?.initData || ''};
+  const init = {method: opts.method || 'GET', headers};
+  if (opts.json){ headers['Content-Type'] = 'application/json'; init.body = JSON.stringify(opts.json); }
+  const r = await fetch(API + path, init);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok){
+    const err = new Error((data.errors && data.errors[0]) || data.error || data.text || ('ошибка ' + r.status));
+    throw err;
+  }
+  return data;
+}
+async function loadAll(){
+  const [chans, cons] = await Promise.all([apiCall('/api/channels'), apiCall('/api/contests')]);
+  CHANNELS = chans;
+  CONTESTS = cons.map(c => ({id: c.id, status: c.status, participants: c.participants,
+                             data: mk(c.settings), media_kind: c.media_kind, winners: c.winners}));
+  renderCounts();
+}
+
+/* ---------- участие по ссылке из поста (startapp=contest_ID) ---------- */
+let joinCid = null;
+const JOIN_CLASS = {success: 'a-green', primary: 'a-blue', danger: 'a-red', default: 'a-plain'};
+function renderResults(list){
+  if (!list || !list.length) return '<p class="hint">Участников не было</p>';
+  return `<div class="res-title">🎉 Результаты розыгрыша</div>
+    <table class="res"><thead><tr><th>Место</th><th>Имя</th><th>Юзернейм</th></tr></thead><tbody>
+    ${list.map(r => `<tr><td>${r.place}</td><td>${esc(r.name)}</td><td>${esc(r.username || '—')}</td></tr>`).join('')}
+    </tbody></table>`;
+}
+async function openJoin(cid){
+  joinCid = cid;
+  $('jMsg').textContent = ''; $('jMissing').innerHTML = ''; $('jResults').innerHTML = '';
+  $('jBtn').style.display = '';
+  $('jCaptcha').classList.add('hidden');
+  show('v-join');
+  try{
+    const d = await apiCall(`/api/public/contests/${cid}`);
+    $('jTitle').textContent = d.name;
+    $('jText').textContent = d.text;
+    $('jInfo').textContent = `👥 Участников: ${d.participants} · 🏆 Победителей: ${d.winners}`;
+    $('jBtn').textContent = d.btnText;
+    $('jBtn').className = 'act ' + (JOIN_CLASS[d.btnColor] || 'a-plain');
+    $('jBtn').onclick = joinContest;
+    if (d.status === 'finished'){
+      $('jBtn').style.display = 'none';
+      $('jInfo').textContent = `👥 Участников: ${d.participants}`;
+      $('jResults').innerHTML = renderResults(d.results);
+      return;
+    }
+    if (d.status !== 'active'){
+      $('jBtn').disabled = true;
+      $('jMsg').textContent = 'Розыгрыш ещё не запущен или уже завершён.';
+      return;
+    }
+    $('jBtn').disabled = false;
+  }catch(e){
+    $('jMsg').textContent = 'Не удалось открыть розыгрыш: ' + e.message;
+  }
+}
+async function loadCaptcha(){
+  const c = await apiCall(`/api/contests/${joinCid}/captcha`);
+  $('jCapQ').textContent = '🛡 Проверка, что ты человек: ' + c.question;
+  $('jCapA').value = '';
+  $('jCaptcha').classList.remove('hidden');
+}
+function showMissing(list){
+  $('jMissing').innerHTML = '<p class="hint">Чтобы участвовать, подпишись на каналы:</p>';
+  list.forEach(ch => {
+    const a = document.createElement('a');
+    a.className = 'join-link';
+    a.textContent = '📢 ' + ch.title;
+    if (ch.url){
+      a.href = ch.url;
+      a.onclick = e => { if (tg){ e.preventDefault(); tg.openTelegramLink(ch.url); } };
+    }
+    $('jMissing').appendChild(a);
+  });
+  $('jMsg').textContent = 'После подписки нажми «Участвовать» ещё раз.';
+}
+async function joinContest(){
+  if (joinCid === null) return;
+  $('jBtn').disabled = true;
+  try{
+    const answer = $('jCapA') ? $('jCapA').value.trim() : '';
+    const res = await apiCall(`/api/contests/${joinCid}/join`, {method: 'POST', json: {answer}});
+    if (res.ok){
+      $('jMsg').textContent = res.already ? 'ℹ️ Ты уже участвуешь в этом розыгрыше' : '🎉 Ты участвуешь! Удачи 🍀';
+      $('jCaptcha').classList.add('hidden');
+      $('jMissing').innerHTML = '';
+      notify('success');
+      return;
+    }
+    if (res.missing){ showMissing(res.missing); notify('warning'); }
+    else if (res.captcha){
+      await loadCaptcha();
+      $('jMsg').textContent = res.reason || 'Ответь на вопрос и нажми «Участвовать».';
+      notify('warning');
+    }
+    else if (res.reason){ $('jMsg').textContent = res.reason; notify('error'); }
+  }catch(e){
+    $('jMsg').textContent = 'Ошибка: ' + e.message;
+    notify('error');
+  }finally{
+    $('jBtn').disabled = false;
+  }
+}
+
+/* ---------- язык ---------- */
+const LANGS = {ru: 'Русский', en: 'English', kk: 'Қазақша'};
+const I18N = {
+  ru: {hello:'Розыгрыши', sub:'Каналы, участники и итоги в одном месте', create:'Новый розыгрыш', createSub:'Создать и запустить',
+       myGiveaways:'Мои розыгрыши', myChannels:'Мои каналы', settings:'Настройки', back:'‹ Назад', theme:'Тема', lang:'Язык',
+       presets:'Готовые темы', cardStyle:'Стиль карточек', wallpaper:'Свой фон', lights:'Свет', lightColor:'Цвет меняется',
+       lightsOff:'Выключен', lightsLeft:'Слева', lightsRight:'Справа', lightsTop:'Сверху', lightsShift:'Меняется'},
+  en: {hello:'Giveaways', sub:'Channels, participants and results in one place', create:'New giveaway', createSub:'Create and launch',
+       myGiveaways:'My giveaways', myChannels:'My channels', settings:'Settings', back:'‹ Back', theme:'Theme', lang:'Language',
+       presets:'Ready themes', cardStyle:'Card style', wallpaper:'Own background', lights:'Light', lightColor:'Changing colour',
+       lightsOff:'Off', lightsLeft:'Left', lightsRight:'Right', lightsTop:'Top', lightsShift:'Changing'},
+  kk: {hello:'Ұтыс ойындары', sub:'Арналар, қатысушылар және нәтижелер бір жерде', create:'Жаңа ұтыс', createSub:'Құру және іске қосу',
+       myGiveaways:'Менің ұтыстарым', myChannels:'Менің арналарым', settings:'Баптаулар', back:'‹ Артқа', theme:'Тақырып', lang:'Тіл',
+       presets:'Дайын тақырыптар', cardStyle:'Карточка стилі', wallpaper:'Өз фоным', lights:'Жарық', lightColor:'Түс ауысады',
+       lightsOff:'Өшік', lightsLeft:'Солда', lightsRight:'Оңда', lightsTop:'Үстде', lightsShift:'Ауысады'}
+};
+function t(key){
+  const lang = document.documentElement.lang || 'ru';
+  return (I18N[lang] && I18N[lang][key]) || I18N.ru[key] || key;
+}
+function getLang(){
+  try { const v = localStorage.getItem('contest-lang'); if (v && I18N[v]) return v; } catch(_){}
+  const code = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.language_code) || 'ru';
+  if (code.startsWith('kk')) return 'kk';
+  if (code.startsWith('en')) return 'en';
+  return 'ru';
+}
+function applyLang(lang){
+  if (!I18N[lang]) lang = 'ru';
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const v = I18N[lang][el.dataset.i18n];
+    if (v) el.textContent = v;
+  });
+  try { localStorage.setItem('contest-lang', lang); } catch(_){}
+  renderLangOpts();
+  renderLightUI();
+}
+function renderLangOpts(){
+  const cur = document.documentElement.lang || 'ru';
+  $('langOpts').innerHTML = Object.entries(LANGS).map(([k, n]) =>
+    `<button class="${k === cur ? 'sel' : ''}" data-lang="${k}">${n}</button>`).join('');
+}
+$('langOpts').addEventListener('click', e => {
+  const b = e.target.closest('[data-lang]'); if (!b) return;
+  haptic('soft');
+  applyLang(b.dataset.lang);
+});
+
+/* ---------- свет: слева, справа, сверху или меняется; цвет меняется ---------- */
+const LIGHT_POS = {
+  left:  [[-18, 22], [-14, 58], [-6, 90]],
+  right: [[118, 22], [114, 58], [106, 90]],
+  top:   [[28, -18], [50, -24], [72, -18]]
+};
+const LIGHT_MODES = ['off', 'left', 'right', 'top', 'shift'];
+let lightTimer = null, colorTimer = null, hue = 210;
+function getLight(){
+  try { return JSON.parse(localStorage.getItem('contest-light')) || {mode: 'shift', color: true}; }
+  catch(_){ return {mode: 'shift', color: true}; }
+}
+function saveLight(l){ try { localStorage.setItem('contest-light', JSON.stringify(l)); } catch(_){} }
+function placeLamps(side){
+  const pts = LIGHT_POS[side] || LIGHT_POS.left;
+  document.querySelectorAll('#lights .lamp').forEach((el, i) => {
+    el.style.left = pts[i][0] + '%';
+    el.style.top = pts[i][1] + '%';
+  });
+}
+function applyLight(l){
+  const lights = document.getElementById('lights');
+  clearInterval(lightTimer); clearInterval(colorTimer);
+  lights.classList.toggle('off', l.mode === 'off');
+  if (l.mode === 'shift'){
+    const sides = ['left', 'right', 'top'];
+    let k = 0;
+    placeLamps(sides[0]);
+    lightTimer = setInterval(() => { k = (k + 1) % sides.length; placeLamps(sides[k]); }, 7000);
+  } else if (l.mode !== 'off'){
+    placeLamps(l.mode);
+  }
+  if (l.color){
+    colorTimer = setInterval(() => {
+      hue = (hue + 2) % 360;
+      document.documentElement.style.setProperty('--lc', `hsl(${hue} 85% 62%)`);
+    }, 120);
+  } else {
+    document.documentElement.style.setProperty('--lc', '#4f8cff');
+  }
+  renderLightUI();
+}
+function renderLightUI(){
+  const l = getLight();
+  const names = {off: t('lightsOff'), left: t('lightsLeft'), right: t('lightsRight'), top: t('lightsTop'), shift: t('lightsShift')};
+  const box = document.getElementById('lightModes');
+  if (box) box.innerHTML = LIGHT_MODES.map(m =>
+    `<button class="${l.mode === m ? 'sel' : ''}" data-lmode="${m}">${names[m]}</button>`).join('');
+  const tog = document.getElementById('lightColor');
+  if (tog){
+    tog.className = 'light-toggle' + (l.color ? ' on' : '');
+    tog.textContent = (l.color ? '✓ ' : '') + t('lightColor');
+  }
+}
+$('lightModes').addEventListener('click', e => {
+  const b = e.target.closest('[data-lmode]'); if (!b) return;
+  haptic('soft');
+  const l = getLight(); l.mode = b.dataset.lmode; saveLight(l); applyLight(l);
+});
+$('lightColor').addEventListener('click', () => {
+  haptic('soft');
+  const l = getLight(); l.color = !l.color; saveLight(l); applyLight(l);
+});
+
+/* ---------- анимации в шапке ---------- */
+const calmA = document.getElementById('calmA');
+const calmB = document.getElementById('calmB');
+const ctxs = [calmA.getContext('2d'), calmB.getContext('2d')];
+let cc = ctxs[0];
+let calmW = 0, calmH = 0, baseHue = 210, active = 0, sceneIdx = 0, switchAt = 0;
+
+function themeHue(){
+  const v = getComputedStyle(document.documentElement).getPropertyValue('--btn').trim();
+  const m = /^#([0-9a-f]{6})$/i.exec(v);
+  if (!m) return 210;
+  const r = parseInt(m[1].slice(0, 2), 16) / 255, g = parseInt(m[1].slice(2, 4), 16) / 255, b = parseInt(m[1].slice(4, 6), 16) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  if (!d) return 210;
+  let h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return Math.round(((h * 60) + 360) % 360);
+}
+function sizeCalm(){
+  const r = calmA.getBoundingClientRect();
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  calmW = r.width; calmH = r.height;
+  [calmA, calmB].forEach((c, i) => {
+    c.width = Math.round(c.getBoundingClientRect().width * dpr);
+    c.height = Math.round(c.getBoundingClientRect().height * dpr);
+    ctxs[i].setTransform(dpr, 0, 0, dpr, 0, 0);
+  });
+}
+sizeCalm();
+window.addEventListener('resize', sizeCalm);
+function col(off, l){ return `hsl(${(baseHue + off) % 360}, 80%, ${l}%)`; }
+function hslRgb(h, s, l){
+  s /= 100; l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = n => { const k = (n + h / 30) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
+  return [Math.round(255 * f(0)), Math.round(255 * f(8)), Math.round(255 * f(4))];
+}
+
+/* жидкие шары: поле, мягкий край без границы */
+const BLOB_LOW = 2;
+const blobCanvas = document.createElement('canvas');
+const bc = blobCanvas.getContext('2d');
+function sceneBlobs(t){
+  cc.clearRect(0, 0, calmW, calmH);
+  const w = Math.max(2, Math.ceil(calmW / BLOB_LOW)), h = Math.max(2, Math.ceil(calmH / BLOB_LOW));
+  blobCanvas.width = w; blobCanvas.height = h;
+  const img = bc.createImageData(w, h);
+  const pal = [0, 1, 2, 3, 4, 5].map(i => hslRgb((baseHue + i * 8) % 360, 80, 38 + i * 7));
+  const balls = [0, 1, 2, 3, 4].map(i => ({
+    x: w * (0.5 + 0.3 * Math.sin(t * (0.55 + i * 0.12) + i)),
+    y: h * (0.5 + 0.26 * Math.cos(t * (0.48 + i * 0.1) + i * 1.7)),
+    r: h * (0.2 + 0.05 * Math.sin(t * 0.9 + i))
+  }));
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let f = 0;
+      for (const b of balls) { const dx = x - b.x, dy = y - b.y; f += (b.r * b.r) / (dx * dx + dy * dy + 1); }
+      const k = Math.min(1, Math.max(0, (f - 0.85) / 0.5));
+      const i = (y * w + x) * 4;
+      const c = pal[Math.min(5, Math.floor(f * 1.5))];
+      img.data[i] = c[0]; img.data[i + 1] = c[1]; img.data[i + 2] = c[2];
+      img.data[i + 3] = Math.round(255 * k * k * (3 - 2 * k));
+    }
+  }
+  bc.putImageData(img, 0, 0);
+  cc.imageSmoothingEnabled = true;
+  cc.drawImage(blobCanvas, 0, 0, calmW, calmH);
+}
+
+/* бесконечная петля */
+function sceneLoop(t){
+  cc.globalCompositeOperation = 'destination-out';
+  cc.fillStyle = 'rgba(0,0,0,0.1)';
+  cc.fillRect(0, 0, calmW, calmH);
+  cc.globalCompositeOperation = 'source-over';
+  const a = Math.min(calmW * 0.36, calmH * 0.62), cx0 = calmW / 2, cy0 = calmH / 2;
+  for (let k = 0; k < 3; k++){
+    const p = t * 0.9 + k * 2.1, s = Math.sin(p), c = Math.cos(p), d = 1 + s * s;
+    cc.beginPath();
+    cc.fillStyle = col(k * 40, 66);
+    cc.shadowColor = col(k * 40, 60); cc.shadowBlur = 16;
+    cc.arc(cx0 + a * c / d, cy0 + a * s * c / d, 6, 0, Math.PI * 2);
+    cc.fill();
+    cc.shadowBlur = 0;
+  }
+}
+
+/* волны */
+function sceneWave(t){
+  cc.clearRect(0, 0, calmW, calmH);
+  for (let k = 0; k < 4; k++){
+    cc.beginPath();
+    for (let x = -10; x <= calmW + 10; x += 4){
+      const y = calmH / 2
+        + Math.sin(x * 0.018 + t * (1.1 + k * 0.25) + k) * (calmH * 0.22) * (1 - k * 0.18)
+        + Math.sin(x * 0.007 - t * 0.6 + k * 2) * 8;
+      if (x === -10) cc.moveTo(x, y); else cc.lineTo(x, y);
+    }
+    cc.lineWidth = 3;
+    cc.strokeStyle = col(k * 30, 62);
+    cc.globalAlpha = 0.45 + k * 0.12;
+    cc.stroke();
+  }
+  cc.globalAlpha = 1;
+}
+
+/* спираль */
+function sceneSpiral(t){
+  cc.clearRect(0, 0, calmW, calmH);
+  const cx0 = calmW / 2, cy0 = calmH / 2, R = Math.min(calmW, calmH) * 0.46;
+  for (let i = 0; i < 70; i++){
+    const u = i / 70, ang = i * 0.45 + t * 1.4;
+    const r = (0.1 + u * 0.9) * R * (1 + 0.06 * Math.sin(t * 2 + i));
+    cc.beginPath();
+    cc.fillStyle = col(i * 3, 58 + u * 12);
+    cc.globalAlpha = 0.25 + u * 0.7;
+    cc.arc(cx0 + Math.cos(ang) * r, cy0 + Math.sin(ang) * r, 1.5 + u * 3.5, 0, Math.PI * 2);
+    cc.fill();
+  }
+  cc.globalAlpha = 1;
+}
+
+/* фигура Лиссажу */
+function sceneLissajous(t){
+  cc.globalCompositeOperation = 'destination-out';
+  cc.fillStyle = 'rgba(0,0,0,0.08)';
+  cc.fillRect(0, 0, calmW, calmH);
+  cc.globalCompositeOperation = 'source-over';
+  const ax = calmW * 0.36, ay = calmH * 0.36, cx0 = calmW / 2, cy0 = calmH / 2;
+  for (let k = 0; k < 2; k++){
+    const p = t * 1.1 + k * Math.PI / 2;
+    cc.beginPath();
+    cc.fillStyle = col(k * 60, 66);
+    cc.arc(cx0 + ax * Math.sin(3 * p + k), cy0 + ay * Math.sin(2 * p), 4.5, 0, Math.PI * 2);
+    cc.fill();
+  }
+}
+
+/* вращающийся тор из точек */
+function sceneTorus(t){
+  cc.clearRect(0, 0, calmW, calmH);
+  const Rr = Math.min(calmW, calmH) * 0.3, r = Rr * 0.42;
+  const ax = t * 0.7, ay = t * 0.9;
+  const cosx = Math.cos(ax), sinx = Math.sin(ax), cosy = Math.cos(ay), siny = Math.sin(ay);
+  for (let i = 0; i < 24; i++){
+    for (let j = 0; j < 10; j++){
+      const u = i / 24 * Math.PI * 2, v = j / 10 * Math.PI * 2;
+      const x = (Rr + r * Math.cos(v)) * Math.cos(u);
+      const y = (Rr + r * Math.cos(v)) * Math.sin(u);
+      const z = r * Math.sin(v);
+      const y1 = y * cosx - z * sinx, z1 = y * sinx + z * cosx;
+      const x2 = x * cosy + z1 * siny, z2 = -x * siny + z1 * cosy;
+      const p = 260 / (260 + z2);
+      cc.beginPath();
+      cc.fillStyle = col(i * 5, 40 + (z2 + Rr) / (2 * Rr) * 30);
+      cc.arc(calmW / 2 + x2 * p, calmH / 2 + y1 * p, 1.2 + p * 1.1, 0, Math.PI * 2);
+      cc.fill();
+    }
+  }
+}
+
+/* сцены: последняя — игральный кубик (DOM) */
+const SCENES = [sceneBlobs, sceneLoop, sceneWave, sceneSpiral, sceneLissajous, sceneTorus, null];
+function showScene(i){
+  sceneIdx = i;
+  const dieWrap = document.getElementById('dieWrap');
+  if (SCENES[i] === null){
+    calmA.classList.remove('on'); calmB.classList.remove('on');
+    dieWrap.classList.add('on');
+  } else {
+    dieWrap.classList.remove('on');
+    const next = active === 0 ? 1 : 0;
+    const nextEl = next === 0 ? calmA : calmB;
+    const prevEl = active === 0 ? calmA : calmB;
+    cc = ctxs[next];
+    cc.clearRect(0, 0, calmW, calmH);
+    nextEl.classList.add('on');
+    prevEl.classList.remove('on');
+    active = next;
+  }
+  switchAt = performance.now() + 14000;
+}
+function calmFrame(now){
+  if (now > switchAt) showScene((sceneIdx + 1) % SCENES.length);
+  const fn = SCENES[sceneIdx];
+  if (fn){ cc = ctxs[active]; baseHue = themeHue(); fn(now / 1000); }
+  requestAnimationFrame(calmFrame);
+}
+showScene(0);
+requestAnimationFrame(calmFrame);
+
+/* ---------- секретная игра: 10 нажатий за 5 секунд ---------- */
+/* темы: 12 штук, повторяются; смена реже с ростом очков; множитель растёт медленно */
+const BB_THEMES = [
+  {name: 'Конфеты',     dark: false, bg: 'linear-gradient(160deg,#ff8fc7,#7fd6ff 55%,#ffe36e)', hues: [330, 30, 200, 140, 280, 55],  sat: 92, light: 60, deco: ['🍬', '🍭', '🍫', '🍩']},
+  {name: 'Море',        dark: true,  bg: 'linear-gradient(170deg,#0a3553,#11738f 60%,#2fc3b8)', hues: [185, 200, 170, 215, 160, 190], sat: 85, light: 60, deco: ['🐠', '🐚', '🐙', '🫧', '🦀']},
+  {name: 'Хеллоуин',    dark: true,  bg: 'linear-gradient(170deg,#1b0b2b,#3b1659 60%,#e0691c)', hues: [28, 275, 100, 15, 300, 45],   sat: 90, light: 58, deco: ['🎃', '👻', '🦇', '🕸', '🍬']},
+  {name: 'Космос',      dark: true,  bg: 'linear-gradient(170deg,#050816,#1d1f4a 60%,#4b2b78)', hues: [240, 280, 200, 320, 20, 160], sat: 85, light: 66, deco: ['⭐', '🪐', '🌙', '✨']},
+  {name: 'Лес',         dark: true,  bg: 'linear-gradient(170deg,#10291a,#1f5a36 60%,#8fd16b)', hues: [120, 95, 40, 150, 30, 80],    sat: 75, light: 58, deco: ['🍄', '🌲', '🦋', '🌿', '🐞']},
+  {name: 'Новый год',   dark: true,  bg: 'linear-gradient(170deg,#0d2b1f,#8b1d2c 70%,#c93a3a)', hues: [0, 120, 45, 200, 350, 60],    sat: 80, light: 60, deco: ['🎄', '❄️', '🎁', '⛄', '🔔']},
+  {name: 'Сакура',      dark: false, bg: 'linear-gradient(160deg,#ffe4ef,#f8c6dc 60%,#ffffff)', hues: [340, 320, 355, 300, 20, 280], sat: 70, light: 70, deco: ['🌸', '🌷', '🌺', '🦢']},
+  {name: 'Пустыня',     dark: false, bg: 'linear-gradient(170deg,#ffd8a1,#f2a65a 60%,#fff1c9)', hues: [30, 15, 45, 200, 90, 10],     sat: 85, light: 55, deco: ['🌵', '🌞', '🐪', '🏜', '🦂']},
+  {name: 'Ночной город', dark: true,  bg: 'linear-gradient(170deg,#0a0f22,#1d2550 60%,#3a1d5c)', hues: [50, 190, 320, 20, 260, 140],  sat: 90, light: 60, deco: ['🌃', '🚕', '🏙', '🌟', '🛸']},
+  {name: 'Фрукты',      dark: false, bg: 'linear-gradient(160deg,#fff7c2,#ffd39b 55%,#c7f5b5)', hues: [0, 40, 110, 280, 55, 15],     sat: 90, light: 58, deco: ['🍓', '🍋', '🍉', '🍇', '🍑']},
+  {name: 'Джунгли',     dark: true,  bg: 'linear-gradient(170deg,#06261a,#0f4d3a 60%,#2a8c5a)', hues: [100, 30, 260, 60, 170, 10],   sat: 80, light: 56, deco: ['🦜', '🐒', '🌴', '🦋', '🐸']},
+  {name: 'Кристаллы',   dark: true,  bg: 'linear-gradient(170deg,#140a2e,#3c1d6b 60%,#2b6cb0)', hues: [270, 190, 320, 60, 140, 220], sat: 90, light: 66, deco: ['💎', '🔮', '✨', '💠']}
+];
+function bbNextAt(k){ return k === 0 ? 0 : 600 * k + 40 * k * (k - 1) / 2; }
+function bbMultFor(k){ return Math.min(4, Math.round((1 + 0.12 * k) * 100) / 100); }
+function bbPickTheme(prev){
+  let i;
+  do { i = R(BB_THEMES.length); } while (i === prev && BB_THEMES.length > 1);
+  return i;
+}
+function bbDecor(list){
+  const box = $('bbDeco');
+  Array.from(box.children).forEach(el => { el.classList.add('out'); setTimeout(() => el.remove(), 800); });
+  for (let i = 0; i < 14; i++){
+    const s = document.createElement('span');
+    s.className = 'bb-deco';
+    s.textContent = list[i % list.length];
+    s.style.left = (Math.random() * 92) + '%';
+    s.style.top = (Math.random() * 92) + '%';
+    s.style.fontSize = (16 + Math.random() * 22) + 'px';
+    s.style.animationDuration = (9 + Math.random() * 9) + 's';
+    s.style.animationDelay = (-Math.random() * 12) + 's';
+    box.appendChild(s);
+  }
+}
+function bbSetTheme(idx, animate){
+  const t = BB_THEMES[idx];
+  bb.theme = idx;
+  const scr = $('v-game');
+  scr.classList.toggle('dark', t.dark);
+  bbDecor(t.deco);
+  const apply = () => scr.style.setProperty('--bbbg', t.bg);
+  if (animate){
+    const ov = document.createElement('div');
+    ov.className = 'bb-bgfade';
+    ov.style.background = t.bg;
+    scr.insertBefore(ov, $('bbDeco'));
+    requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add('on')));
+    setTimeout(() => { apply(); ov.remove(); }, 1100);
+    const f = $('bbFlash');
+    f.classList.remove('show'); void f.offsetWidth; f.classList.add('show');
+    bbPopup('Новая тема', `×${bb.mult}`, true);
+  } else {
+    apply();
+  }
+  bbDrawBoard(null, null);
+  bbRenderTray();
+}
+
+function bbThemeCheck(){
+  let changed = false;
+  while (bb.score >= bb.nextAt){
+    bb.level++;
+    bb.nextAt = bbNextAt(bb.level + 1);
+    bb.mult = bbMultFor(bb.level);
+    bb.pendingTheme = bbPickTheme(bb.theme);
+    changed = true;
+  }
+  if (changed) setTimeout(() => bbSetTheme(bb.pendingTheme, true), 1000);
+}
+
+const BB_N = 8;
+const BB_SHAPES = [
+  [[0,0]], [[0,0],[0,1]], [[0,0],[1,0]], [[0,0],[0,1],[0,2]], [[0,0],[1,0],[2,0]],
+  [[0,0],[0,1],[1,0],[1,1]], [[0,0],[0,1],[0,2],[1,1]], [[0,0],[1,0],[2,0],[2,1]],
+  [[0,0],[0,1],[1,1],[1,2]], [[0,0],[0,1],[0,2],[0,3]], [[0,0],[1,0],[2,0],[3,0]],
+  [[0,0],[1,0],[1,1]], [[0,0],[0,1],[1,0]]
+];
+let bb = {grid: [], hand: [], score: 0, over: false, drag: null, busy: false, fx: null, theme: 0, shift: 0, level: 0, mult: 1, nextAt: 600, pendingTheme: 0};
+let bbBest = 0;
+const secretTaps = [];
+document.addEventListener('pointerdown', () => {
+  if (current === 'v-game') return;
+  const now = Date.now();
+  secretTaps.push(now);
+  while (secretTaps.length && now - secretTaps[0] > 5000) secretTaps.shift();
+  if (secretTaps.length >= 10){ secretTaps.length = 0; openGame(); }
+}, true);
+
+function bbNorm(cells){
+  const mr = Math.min(...cells.map(c => c[0])), mc = Math.min(...cells.map(c => c[1]));
+  return cells.map(([r, c]) => [r - mr, c - mc]);
+}
+function bbDims(cells){ return {h: Math.max(...cells.map(c => c[0])) + 1, w: Math.max(...cells.map(c => c[1])) + 1}; }
+function bbNewPiece(){ return {cells: bbNorm(BB_SHAPES[R(BB_SHAPES.length)]), hue: R(6)}; }
+/* подсказка: иногда даёт фигуру, которая сразу собирает линию */
+function bbSimLines(cells, r0, c0){
+  const placed = new Set(cells.map(([r, c]) => (r0 + r) * BB_N + (c0 + c)));
+  const filled = (y, x) => placed.has(y * BB_N + x) || bb.grid[y][x];
+  let n = 0;
+  for (let y = 0; y < BB_N; y++){ let f = true; for (let x = 0; x < BB_N; x++) if (!filled(y, x)) { f = false; break; } if (f) n++; }
+  for (let x = 0; x < BB_N; x++){ let f = true; for (let y = 0; y < BB_N; y++) if (!filled(y, x)) { f = false; break; } if (f) n++; }
+  return n;
+}
+function bbBestHelp(){
+  let best = null, bestN = 0;
+  BB_SHAPES.map(bbNorm).forEach(cells => {
+    for (let r = 0; r < BB_N; r++) for (let c = 0; c < BB_N; c++){
+      if (!bbFits({cells}, r, c)) continue;
+      const n = bbSimLines(cells, r, c);
+      if (n > bestN){ bestN = n; best = cells; }
+    }
+  });
+  return best ? {cells: best, hue: R(6)} : null;
+}
+function bbFittingPiece(){
+  const shapes = BB_SHAPES.map(bbNorm).sort(() => Math.random() - 0.5);
+  for (const cells of shapes){ const p = {cells, hue: R(6)}; if (bbAnyFit(p)) return p; }
+  return null;
+}
+function bbCountFits(p){
+  let n = 0;
+  for (let r = 0; r < BB_N; r++) for (let c = 0; c < BB_N; c++) if (bbFits(p, r, c)) n++;
+  return n;
+}
+/* из нескольких случайных фигур берём ту, для которой на поле больше всего места */
+function bbSmartPiece(){
+  let best = null, bestN = -1;
+  for (let k = 0; k < 6; k++){
+    const p = bbNewPiece();
+    const n = bbCountFits(p);
+    const score = Math.min(n, 14) + Math.random() * 2;
+    if (n > 0 && score > bestN){ bestN = score; best = p; }
+  }
+  return best || bbNewPiece();
+}
+function bbNewHand(){
+  const shapes = BB_SHAPES.map(bbNorm);
+  const counts = shapes.map(s => bbFitCount(s));
+  const easy = shapes.filter((s, i) => counts[i] >= 3);
+  const ok = shapes.filter((s, i) => counts[i] > 0);
+  const pool = easy.length >= 3 ? easy : (ok.length ? ok : shapes);
+  const pick = () => ({cells: pool[R(pool.length)], hue: R(6)});
+  const hand = [pick(), pick(), pick()];
+  if (Math.random() < 0.5){ const h = bbBestHelp(); if (h) hand[R(3)] = h; }
+  if (!hand.some(bbAnyFit)){ const f = bbFittingPiece(); if (f) hand[R(3)] = f; }
+  hand.forEach(p => { p.fresh = true; });
+  bb.hand = hand;
+}
+function bbFitCount(cells){
+  let n = 0;
+  for (let r = 0; r < BB_N; r++) for (let c = 0; c < BB_N; c++) if (bbFits({cells}, r, c)) n++;
+  return n;
+}
+
+function bbColor(hue){
+  const t = BB_THEMES[bb.theme] || BB_THEMES[0];
+  const h = t.hues[hue % t.hues.length];
+  const l = t.dark ? Math.min(74, t.light + 6) : Math.max(36, t.light - 24);
+  return `hsl(${(h + (bb.shift || 0) * 0.3) % 360}, ${Math.min(100, t.sat + 6)}%, ${l}%)`;
+}
+
+function bbFits(p, r0, c0){
+  return p.cells.every(([r, c]) => {
+    const y = r0 + r, x = c0 + c;
+    return y >= 0 && y < BB_N && x >= 0 && x < BB_N && !bb.grid[y][x];
+  });
+}
+function bbAnyFit(p){
+  for (let r = 0; r < BB_N; r++) for (let c = 0; c < BB_N; c++) if (bbFits(p, r, c)) return true;
+  return false;
+}
+function bbPut(p, r0, c0){
+  const idx = [];
+  p.cells.forEach(([r, c]) => {
+    bb.grid[r0 + r][c0 + c] = p.hue + 1;
+    idx.push((r0 + r) * BB_N + (c0 + c));
+  });
+  return idx;
+}
+function bbFullLines(){
+  const cells = new Set(), lines = [];
+  for (let r = 0; r < BB_N; r++) if (bb.grid[r].every(v => v)) {
+    lines.push({t: 'r', i: r});
+    for (let c = 0; c < BB_N; c++) cells.add(r * BB_N + c);
+  }
+  for (let c = 0; c < BB_N; c++) if (bb.grid.every(row => row[c])) {
+    lines.push({t: 'c', i: c});
+    for (let r = 0; r < BB_N; r++) cells.add(r * BB_N + c);
+  }
+  return {cells, count: lines.length, lines};
+}
+
+function bbClearCells(set){ set.forEach(i => { bb.grid[Math.floor(i / BB_N)][i % BB_N] = 0; }); }
+function linesWord(n){
+  const d = n % 10, dd = n % 100;
+  if (d === 1 && dd !== 11) return 'линия';
+  if (d >= 2 && d <= 4 && (dd < 10 || dd >= 20)) return 'линии';
+  return 'линий';
+}
+function bbPieceHtml(p, i){
+  if (!p) return `<div class="bb-slot" data-idx="${i}"></div>`;
+  const d = bbDims(p.cells);
+  const filled = new Set(p.cells.map(([r, c]) => r * d.w + c));
+  let cells = '';
+  for (let k = 0; k < d.h * d.w; k++){
+    cells += filled.has(k) ? `<i class="bb-pc" style="background:${bbColor(p.hue)}"></i>` : '<i class="bb-pc" style="opacity:0"></i>';
+  }
+  return `<div class="bb-piece${p.fresh ? ' in' : ''}" data-idx="${i}" style="grid-template-columns:repeat(${d.w},16px)">${cells}</div>`;
+}
+
+function bbDrawBoard(preview, clear){
+  const fx = bb.fx || {pop: new Set(), clr: new Set()};
+  let html = '';
+  for (let r = 0; r < BB_N; r++) for (let c = 0; c < BB_N; c++){
+    const i = r * BB_N + c, v = bb.grid[r][c];
+    const cls = 'bb-cell' + (v ? ' f' : '') + (preview && preview.has(i) ? ' pv' : '')
+      + (clear && clear.has(i) ? ' willclr' : '')
+      + (fx.pop.has(i) ? ' pop' : '') + (fx.clr.has(i) ? ' clr' : '')
+      + (fx.wave ? ' wave' : '') + (fx.swap ? ' swap' : '');
+    const styles = [];
+    if (v) styles.push(`background-color:${bbColor(v - 1)}`);
+    if (fx.wave || fx.swap) styles.push(`--d:${(r + c) * 45}ms`);
+    html += `<div class="${cls}"${styles.length ? ` style="${styles.join(';')}"` : ''}></div>`;
+  }
+  $('bbBoard').innerHTML = html;
+  if (bb.fx) bb.fx.pop = new Set();
+}
+
+function bbRenderTray(){
+  const box = $('bbTray');
+  const old = {};
+  box.querySelectorAll('.bb-piece').forEach(el => { old[el.dataset.idx] = el.getBoundingClientRect().left; });
+  box.innerHTML = bb.hand.map((p, i) => ((p && !(bb.drag && bb.drag.p === p)) ? bbPieceHtml(p, i) : '')).join('');
+  box.querySelectorAll('.bb-piece').forEach(el => {
+    const idx = el.dataset.idx;
+    if (old[idx] === undefined) return;
+    const p = bb.hand[Number(idx)];
+    if (p && p.fresh) return;
+    const dx = old[idx] - el.getBoundingClientRect().left;
+    if (!dx) return;
+    el.style.transition = 'none';
+    el.style.transform = `translateX(${dx}px)`;
+    void el.offsetWidth;
+    el.style.transition = 'transform .34s cubic-bezier(.2,.8,.2,1)';
+    el.style.transform = '';
+  });
+  bb.hand.forEach(p => { if (p) p.fresh = false; });
+}
+
+function bbRender(){
+  bbDrawBoard(null);
+  bbCount(bb.score);
+  bbRenderTray(false);
+}
+function bbPopup(main, sub, big){
+  const el = $('bbPopup');
+  el.innerHTML = main + (sub ? `<small>${sub}</small>` : '');
+  el.classList.toggle('big', !!big);
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+}
+
+function bbGeom(){
+  const b = $('bbBoard').getBoundingClientRect();
+  const cell = (b.width - 16 - 7 * 4) / BB_N;
+  return {left: b.left + 8, top: b.top + 8, step: cell + 4, cell};
+}
+function bbTarget(p, x, y){
+  const g = bbGeom(), d = bbDims(p.cells);
+  const r0 = Math.round((y - g.top) / g.step - d.h / 2);
+  const c0 = Math.round((x - g.left) / g.step - d.w / 2);
+  return {r0, c0, ok: bbFits(p, r0, c0)};
+}
+function bbPreviewSet(p, t){
+  const s = new Set();
+  p.cells.forEach(([r, c]) => {
+    const y = t.r0 + r, x = t.c0 + c;
+    if (y >= 0 && y < BB_N && x >= 0 && x < BB_N) s.add(y * BB_N + x);
+  });
+  return s;
+}
+function bbWillClear(p, t){
+  const placed = new Set(p.cells.map(([r, c]) => (t.r0 + r) * BB_N + (t.c0 + c)));
+  const filled = (y, x) => placed.has(y * BB_N + x) || bb.grid[y][x];
+  const out = new Set();
+  for (let y = 0; y < BB_N; y++){
+    let f = true; for (let x = 0; x < BB_N; x++) if (!filled(y, x)) { f = false; break; }
+    if (f) for (let x = 0; x < BB_N; x++) out.add(y * BB_N + x);
+  }
+  for (let x = 0; x < BB_N; x++){
+    let f = true; for (let y = 0; y < BB_N; y++) if (!filled(y, x)) { f = false; break; }
+    if (f) for (let y = 0; y < BB_N; y++) out.add(y * BB_N + x);
+  }
+  return out.size ? out : null;
+}
+function bbMove(e){
+  const dg = bb.drag; if (!dg) return;
+  const x = e.clientX, y = e.clientY - 56;
+  dg.ghost.style.transform = `translate(${x - dg.size.w / 2}px, ${y - dg.size.h / 2}px)`;
+  const t = bbTarget(dg.p, x, y);
+  dg.t = t;
+  if (t.ok) bbDrawBoard(bbPreviewSet(dg.p, t), bbWillClear(dg.p, t));
+  else bbDrawBoard(null, null);
+}
+
+function bbFinishMove(){
+  bb.busy = false;
+  const left = bb.hand.filter(Boolean);
+  if (!left.some(bbAnyFit)) bbNoRoom();
+}
+/* фигуры некуда поставить: пауза, плавная надпись, затем итог */
+function bbNoRoom(){
+  bb.busy = true;
+  setTimeout(() => {
+    const el = $('bbNoRoom');
+    el.classList.remove('show');
+    void el.offsetWidth;
+    el.classList.add('show');
+    haptic('heavy');
+    setTimeout(bbGameOver, 2000);
+  }, 900);
+}
+
+/* эффекты сборки линии: вспышки-лучи, разлёт частиц, дрожание поля */
+function bbBuzz(n){
+  try { if (navigator.vibrate) navigator.vibrate(n === 1 ? [22] : [30, 35, 55, 30, 85]); } catch(_){}
+}
+function bbFxLines(L){
+  const wrap = $('bbBoard').parentElement;
+  const wr = wrap.getBoundingClientRect();
+  const g = bbGeom();
+  const ox = g.left - wr.left, oy = g.top - wr.top, step = g.step, cell = g.cell;
+  wrap.classList.remove('shake'); void wrap.offsetWidth; wrap.classList.add('shake');
+  setTimeout(() => wrap.classList.remove('shake'), 450);
+  const frag = document.createDocumentFragment();
+  L.lines.forEach((ln, k) => {
+    const b = document.createElement('div');
+    b.className = 'bb-beam' + (ln.t === 'c' ? ' v' : '');
+    b.style.setProperty('--h', baseHue);
+    b.style.animationDelay = (k * 90) + 'ms';
+    if (ln.t === 'r') Object.assign(b.style, {left: ox + 'px', top: (oy + ln.i * step + cell / 2 - 4) + 'px', width: (BB_N * step - 4) + 'px', height: '8px'});
+    else Object.assign(b.style, {top: oy + 'px', left: (ox + ln.i * step + cell / 2 - 4) + 'px', height: (BB_N * step - 4) + 'px', width: '8px'});
+    frag.appendChild(b);
+  });
+  L.cells.forEach(i => {
+    const r = Math.floor(i / BB_N), c = i % BB_N;
+    const v = bb.grid[r][c];
+    const color = v ? bbColor(v - 1) : '#fff';
+    const cx = ox + c * step + cell / 2, cy = oy + r * step + cell / 2;
+    for (let k = 0; k < 6; k++){
+      const p = document.createElement('i');
+      p.className = 'bb-part';
+      const ang = Math.random() * Math.PI * 2, dist = 40 + Math.random() * 70;
+      p.style.left = (cx - 3.5) + 'px';
+      p.style.top = (cy - 3.5) + 'px';
+      p.style.setProperty('--tx', Math.cos(ang) * dist + 'px');
+      p.style.setProperty('--ty', Math.sin(ang) * dist + 'px');
+      p.style.setProperty('--rot', (Math.random() * 720 - 360) + 'deg');
+      p.style.background = color;
+      p.style.animationDelay = (Math.random() * 80) + 'ms';
+      frag.appendChild(p);
+    }
+  });
+  wrap.appendChild(frag);
+  setTimeout(() => wrap.querySelectorAll('.bb-beam,.bb-part').forEach(x => x.remove()), 1000);
+}
+function bbUp(){
+  const dg = bb.drag; if (!dg) return;
+  document.removeEventListener('pointermove', bbMove);
+  document.removeEventListener('pointerup', bbUp);
+  dg.ghost.remove();
+  bb.drag = null;
+  if (!dg.t || !dg.t.ok){
+    bbDrawBoard(null, null);
+    dg.p.fresh = true;
+    bbRenderTray();
+    return;
+  }
+  haptic('light');
+  bb.busy = true;
+  const placed = bbPut(dg.p, dg.t.r0, dg.t.c0);
+  const slot = bb.hand.indexOf(dg.p);
+  if (slot >= 0) bb.hand[slot] = null;
+  const lines = bbFullLines();
+  bb.fx = {pop: new Set(placed), clr: lines.cells};
+  bbDrawBoard(null);
+  bbRenderTray();
+  const gained = placed.length * 2;
+  if (lines.count){
+    bbFxLines(lines);
+    bbBuzz(lines.count);
+    setTimeout(() => {
+      bbClearCells(lines.cells);
+      bb.fx = null;
+      const empty = bb.grid.every(row => row.every(v => !v));
+      const bonus = 20 * lines.count * lines.count;
+      const total = Math.round((gained + bonus + (empty ? 200 : 0)) * bb.mult);
+      bb.score += total;
+      bbCount(bb.score);
+      bbThemeCheck();
+      bbDrawBoard(null);
+      if (bb.hand.every(x => !x)) bbNewHand();
+      bbRenderTray();
+      bbPopup(`+${total}`, `${lines.count} ${linesWord(lines.count)} · бонус +${bonus}${empty ? ' · идеально +200' : ''}`, lines.count >= 2);
+      haptic('medium');
+      if (empty) bbPerfect(); else bbFinishMove();
+    }, 440);
+  } else {
+    bb.fx = null;
+    const gm = Math.round(gained * bb.mult);
+    bb.score += gm;
+    bbCount(bb.score);
+    bbThemeCheck();
+    bbPopup(`+${gm}`, '');
+    if (bb.hand.every(x => !x)) bbNewHand();
+    bbRenderTray();
+    setTimeout(bbFinishMove, 150);
+  }
+}
+
+/* поле полностью очищено: волна по клеткам и смена цветовой темы игры */
+function bbPerfect(){
+  bb.fx = {pop: new Set(), clr: new Set(), wave: true};
+  bbDrawBoard(null);
+  notify('success');
+  setTimeout(() => {
+    bb.shift = (bb.shift + 70 + R(220)) % 360;
+    bb.fx = {pop: new Set(), clr: new Set(), swap: true};
+    bbDrawBoard(null);
+    bbRenderTray();
+    $('bbBoard').parentElement.style.setProperty('--glow', bbColor(0).replace('hsl(', 'hsla(').replace(')', ', .55)'));
+    setTimeout(() => { bb.fx = null; bbDrawBoard(null); bbFinishMove(); }, 650);
+  }, 1100);
+}
+
+$('bbTray').addEventListener('pointerdown', e => {
+  let el = e.target.closest ? e.target.closest('.bb-piece') : null;
+  let bestD = Infinity, nearest = null;
+  $('bbTray').querySelectorAll('.bb-piece').forEach(pc => {
+    const r = pc.getBoundingClientRect();
+    const d = Math.hypot(r.left + r.width / 2 - e.clientX, (r.top + r.height / 2 - e.clientY) * 0.6);
+    if (d < bestD){ bestD = d; nearest = pc; }
+  });
+  if (nearest && bestD < 150) el = nearest;
+  if (!el || bb.over || bb.drag || bb.busy) return;
+  const p = bb.hand[Number(el.dataset.idx)];
+  if (!p) return;
+  e.preventDefault();
+  const g = bbGeom(), d = bbDims(p.cells);
+  const ghost = document.createElement('div');
+  ghost.className = 'bb-ghost';
+  ghost.style.gridTemplateColumns = `repeat(${d.w}, ${g.cell}px)`;
+  const filled = new Set(p.cells.map(([r, c]) => r * d.w + c));
+  let html = '';
+  for (let k = 0; k < d.h * d.w; k++){
+    html += filled.has(k) ? `<i class="bb-gc" style="width:${g.cell}px;height:${g.cell}px;background:${bbColor(p.hue)}"></i>`
+                          : `<i class="bb-gc" style="width:${g.cell}px;height:${g.cell}px;opacity:0"></i>`;
+  }
+  ghost.innerHTML = html;
+  document.body.appendChild(ghost);
+  bb.drag = {p, ghost, size: {w: d.w * g.cell + (d.w - 1) * 4, h: d.h * g.cell + (d.h - 1) * 4}, t: null};
+  document.addEventListener('pointermove', bbMove);
+  document.addEventListener('pointerup', bbUp);
+  bbRenderTray();
+});
+/* счёт пересчитывается плавно, цифры «накручиваются» до нового значения */
+function bbCount(target){
+  const el = $('bbScore');
+  const from = bb.shown || 0;
+  bb.shown = target;
+  const id = bb.countId = (bb.countId || 0) + 1;
+  $('bbBest').textContent = '🏆 ' + Math.max(bbBest || 0, target);
+  if (from === target){ el.textContent = String(target); return; }
+  const dur = Math.min(800, 280 + Math.abs(target - from) * 0.5);
+  const t0 = performance.now();
+  const step = now => {
+    if (id !== bb.countId) return;
+    const p = Math.min(1, (now - t0) / dur);
+    const e = 1 - Math.pow(1 - p, 3);
+    el.textContent = String(Math.round(from + (target - from) * e));
+    if (p < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+  el.classList.remove('tick'); void el.offsetWidth; el.classList.add('tick');
+}
+
+function bbNewGame(){
+  bb.grid = Array.from({length: BB_N}, () => Array(BB_N).fill(0));
+  bb.score = 0; bb.over = false; bb.busy = false; bb.fx = null; bb.shift = 0; bb.shown = 0;
+  $('bbScore').textContent = 0;
+  bb.level = 0; bb.mult = 1; bb.nextAt = bbNextAt(1); bb.pendingTheme = bbPickTheme(-1);
+  $('bbOver').classList.add('hidden');
+  bbNewHand();
+  bbSetTheme(bb.pendingTheme, false);
+  bbRender();
+}
+
+function bbGameOver(){
+  bb.over = true;
+  $('bbOverScore').textContent = bb.score;
+  $('bbOver').classList.remove('hidden');
+  apiCall('/api/bb/score', {method: 'POST', json: {score: bb.score}})
+    .then(() => loadTop()).catch(() => {});
+}
+function loadTop(){
+  apiCall('/api/bb/top').then(d => {
+    bbBest = d.mine;
+    $('bbBest').textContent = `🏆 ${d.mine}`;
+    $('bbTop').innerHTML = d.top.length
+      ? d.top.map((r, i) => `<div class="bb-row${r.me ? ' me' : ''}" style="--i:${i}"><span>${i + 1}</span><b>${esc(r.name)}</b><em>${r.best}</em></div>`).join('')
+      : '<div class="car-empty">Пока пусто</div>';
+  }).catch(() => {});
+}
+function openGame(){
+  show('v-game');
+  if (!bb.grid.length || bb.over) bbNewGame(); else bbRender();
+  loadTop();
+}
+$('bbRestart').onclick = bbNewGame;
+$('bbAgain').onclick = bbNewGame;
+document.body.appendChild($('bbTopModal'));
+document.body.appendChild($('bbOver'));
+$('bbTopBtn').onclick = () => {
+  const btn = $('bbTopBtn'), box = $('bbTopModal').querySelector('.bb-top-box');
+  btn.classList.remove('pulse'); void btn.offsetWidth; btn.classList.add('pulse');
+  $('bbTopModal').classList.remove('hidden');
+  box.classList.remove('pop'); void box.offsetWidth; box.classList.add('pop');
+  loadTop();
+};
+$('bbTopClose').onclick = () => $('bbTopModal').classList.add('hidden');
+$('bbTopModal').addEventListener('click', e => { if (e.target === $('bbTopModal')) $('bbTopModal').classList.add('hidden'); });
+
+/* ---------- карусели в меню: по 5, дальше «ещё N» ---------- */
+function avatarHtml(url, label, cls){
+  const letter = (label || '?').trim().charAt(0).toUpperCase() || '?';
+  return `<span class="av ${cls || ''}"><b>${esc(letter)}</b>${url ? `<img src="${url}" alt="" onerror="this.remove()">` : ''}</span>`;
+}
+const CAR_LIMIT = 5;
+let carShow = {ch: CAR_LIMIT, co: CAR_LIMIT};
+const CO_STATUS = {active: 'Активен', finished: 'Завершён', draft: 'Черновик'};
+function moreCard(kind, n){
+  return `<button class="ccard more" data-more="${kind}"><span class="more-n">+${n}</span><span class="cc-meta">ещё, нажми</span></button>`;
+}
+function renderCarousels(){
+  const chBox = $('carChannels'), coBox = $('carContests');
+  if (!chBox || !coBox) return;
+  chBox.innerHTML = CHANNELS.length
+    ? CHANNELS.slice(0, carShow.ch).map(c => `
+        <button class="ccard" data-chid="${c.id}">
+          ${avatarHtml('', c.name, 'sm')}
+          <div class="cc-name">${esc(c.name)}</div>
+          <div class="cc-meta">${esc(c.username || 'приватный канал')}</div>
+        </button>`).join('') + (CHANNELS.length > carShow.ch ? moreCard('ch', CHANNELS.length - carShow.ch) : '')
+    : '<div class="car-empty">Каналов пока нет. Добавь бота админом в свой канал.</div>';
+  coBox.innerHTML = CONTESTS.length
+    ? CONTESTS.slice(0, carShow.co).map(c => `
+        <div class="ccard">
+          <span class="badge2 ${c.status}">${CO_STATUS[c.status] || c.status}</span>
+          <div class="cc-name">${esc(c.data.name || 'Без названия')}</div>
+          <div class="cc-meta">участников ${c.participants}</div>
+          <button class="cc-btn" data-open="${c.id}">Открыть</button>
+        </div>`).join('') + (CONTESTS.length > carShow.co ? moreCard('co', CONTESTS.length - carShow.co) : '')
+    : '<div class="car-empty">Розыгрышей пока нет. Нажми «Создать розыгрыш».</div>';
+}
+function carouselClick(e){
+  const more = e.target.closest('[data-more]');
+  if (more){
+    const k = more.dataset.more;
+    carShow[k] = k === 'ch' ? CHANNELS.length : CONTESTS.length;
+    renderCarousels();
+    return;
+  }
+  const ch = e.target.closest('[data-chid]');
+  if (ch){ toast(CHANNELS.find(c => String(c.id) === ch.dataset.chid)?.username || 'Канал'); return; }
+  const op = e.target.closest('[data-open]');
+  if (op) openDetail(Number(op.dataset.open));
+}
+$('carChannels') && $('carChannels').addEventListener('click', carouselClick);
+$('carContests') && $('carContests').addEventListener('click', carouselClick);
+
+/* ---------- вся подложка каруселей — кнопка, открывает полный список ---------- */
+document.addEventListener('click', e => {
+  const sec = e.target.closest && e.target.closest('[data-sec]');
+  if (!sec) return;
+  if (e.target.closest('.ccard, [data-more], [data-chid], [data-open], button[data-go]')) return;
+  if (sec.dataset.sec === 'channels'){ renderChannels(); show('v-channels'); }
+  else { renderContests(); show('v-contests'); }
+});
+
+/* ---------- статистика розыгрыша ---------- */
+let statsCid = null;
+const STAT_RANGES = [['24h', '24 часа'], ['7d', '7 дней'], ['30d', '30 дней']];
+function barsSvg(series){
+  if (!series.length) return '<div class="car-empty">Пока нет данных</div>';
+  const W = 320, H = 140, mx = Math.max(1, ...series.map(p => p.count)), bw = W / series.length;
+  return `<svg viewBox="0 0 ${W} ${H}" class="chart">` + series.map((p, i) => {
+    const h = p.count / mx * (H - 26);
+    return `<rect x="${i * bw + bw * 0.18}" y="${H - 18 - h}" width="${bw * 0.64}" height="${Math.max(h, p.count ? 2 : 0)}" rx="3" fill="#4f8cff"/>` +
+           (series.length <= 8 || i % Math.ceil(series.length / 6) === 0
+             ? `<text x="${i * bw + bw / 2}" y="${H - 3}" text-anchor="middle" font-size="9" fill="currentColor">${esc(p.label)}</text>` : '');
+  }).join('') + '</svg>';
+}
+async function openStats(cid, range){
+  statsCid = cid;
+  show('v-stats');
+  $('statsBody').innerHTML = '<div class="car-empty">Загрузка…</div>';
+  try{
+    const d = await apiCall(`/api/contests/${cid}/stats?range=${range}`);
+    $('statsBody').innerHTML = `
+      <h1 class="set-h">📈 Статистика</h1>
+      <div class="st-grid">
+        <div class="st-box"><small>Всего участников</small><b>${fmtNum(d.total)}</b></div>
+        <div class="st-box"><small>За последний час</small><b>${fmtNum(d.lastHour)}</b></div>
+        <div class="st-box"><small>За 24 часа</small><b>${fmtNum(d.last24h)}</b></div>
+        <div class="st-box"><small>За 7 дней</small><b>${fmtNum(d.last7d)}</b></div>
+      </div>
+      <div class="st-chips">${STAT_RANGES.map(([k, n]) =>
+        `<button class="${k === range ? 'sel' : ''}" data-srange="${k}">${n}</button>`).join('')}</div>
+      <div class="chart-card"><div class="chart-title">Участия по ${range === '24h' ? 'часам' : 'дням'} (МСК)</div>${barsSvg(d.series)}</div>`;
+  }catch(e){ $('statsBody').innerHTML = `<div class="car-empty">${esc(e.message)}</div>`; }
+}
+$('statsBody').addEventListener('click', e => {
+  const b = e.target.closest('[data-srange]');
+  if (b && statsCid) openStats(statsCid, b.dataset.srange);
+});
+
+/* старт */
+applyTheme(getTheme());
+applyWall(getWall());
+applyGlass(getGlass());
+applyLang(getLang());
+applyLight(getLight());
+renderCounts();
+show('v-menu');
+const startParam = (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) || '';
+if (startParam.startsWith('contest_') && /^\d+$/.test(startParam.slice(8))){
+  openJoin(Number(startParam.slice(8)));
+} else {
+  loadAll().catch(e => toast('Открой приложение из Telegram: ' + e.message));
+}
+</script>
+</body>
+</html>
